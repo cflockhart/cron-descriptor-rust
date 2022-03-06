@@ -1,0 +1,17 @@
+[package]
+name = "rust-cron-parser"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lazy_static = "1.4.0"
+rust-i18n = "0"
+
+[package.metadata.i18n]
+# The available locales for your application, default: ["en"].
+available-locales = ["en"]
+
+# The default locale, default: "en".
+default-locale = "en"
