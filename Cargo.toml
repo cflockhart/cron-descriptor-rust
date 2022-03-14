@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 lazy_static = "1.4.0"
 rust-i18n = "0"
+regex = "1.5.4"
 
 [package.metadata.i18n]
 # The available locales for your application, default: ["en"].

@@ -3,22 +3,61 @@ extern crate rust_i18n;
 
 i18n!("locales");
 
-mod cronparser {
+mod date_time_utils {
+    use crate::cronparser::Options;
 
-    enum CasingTypeEnum {
-        Title, Sentence, LowerCase
+    pub fn format_time(hours_expression: &str, minutes_expression: &str, opts: &Options) -> String {
+        format_time_secs(hours_expression, minutes_expression, "", opts)
     }
+
+    pub fn format_time_secs(hours_expression: &str,
+                       minutes_expression: &str,
+                       seconds_expression: &str,
+                       opts: &Options) -> String {
+        let hour: u8 = hours_expression.parse().unwrap();
+        let minutes: u8 = minutes_expression.parse().unwrap();
+
+        if opts.twenty_four_hour_time {
+            if seconds_expression.is_empty() {
+               todo!()
+            } else {
+               todo!()
+            }
+        }
+        todo!()
+    }
+
+    pub fn format_minutes(minutes_expression: &str) -> String {
+        todo!()
+    }
+}
+
+mod cronparser {
+    enum CasingTypeEnum {
+        Title,
+        Sentence,
+        LowerCase,
+    }
+
     enum DescriptionTypeEnum {
-        FULL, TIMEOFDAY, SECONDS, MINUTES, HOURS, DAYOFWEEK, MONTH, DAYOFMONTH, YEAR
+        FULL,
+        TIMEOFDAY,
+        SECONDS,
+        MINUTES,
+        HOURS,
+        DAYOFWEEK,
+        MONTH,
+        DAYOFMONTH,
+        YEAR,
     }
 
     pub struct Options {
         throw_exception_on_parse_error: bool,
         casing_type: CasingTypeEnum,
         verbose: bool,
-        pub(crate) zero_based_day_of_week: bool,
-        twenty_four_hour_time: bool,
-        need_space_between_words: bool
+        pub zero_based_day_of_week: bool,
+        pub twenty_four_hour_time: bool,
+        need_space_between_words: bool,
     }
 
     impl Options {
@@ -29,7 +68,7 @@ mod cronparser {
                 verbose: false,
                 zero_based_day_of_week: true,
                 twenty_four_hour_time: false,
-                need_space_between_words: true
+                need_space_between_words: true,
             };
         }
 
@@ -41,31 +80,136 @@ mod cronparser {
             };
             return opts2;
         }
-
-
     }
 
-    pub mod expression_parser {
-        use crate::cronparser::Options;
-
-        pub fn parse(expression: &String, options: &Options) -> Vec<String> {
-
-        }
-    }
 
     pub mod cron_expression_descriptor {
         use crate::cronparser;
         use crate::cronparser::DescriptionTypeEnum;
         use crate::cronparser::DescriptionTypeEnum::FULL;
+        use regex::Regex;
 
         const SPECIAL_CHARACTERS: [char; 4] = ['/', '-', ',', '*'];
+
+        pub struct ParseException {
+            s: &'static str,
+            error_offset: u8,
+        }
+
+        mod expression_parser {
+            use lazy_static::lazy_static;
+            use regex::Regex;
+            use crate::cronparser::cron_expression_descriptor::ParseException;
+            use crate::cronparser::Options;
+
+            pub fn parse(expression: &String, options: &Options) -> Result<Vec<&str>, ParseException> {
+                let mut parsed: Vec<&str> = vec!["", "", "", "", "", "", ""];
+                if expression.trim().is_empty() {
+                    let err_msg = t!("expression_empty_exception");
+                    Err(ParseException {
+                        s: err_msg,
+                        error_offset: 0,
+                    })
+                } else {
+                    let expression_parts = expression.trim().split(' ').collect();
+                    if expression_parts.len() < 5 {
+                        return Err(ParseException {
+                            s: expression,
+                            error_offset: 0,
+                        })
+                    } else if expression_parts.len() == 5 {
+                        parsed[0] = "";
+                        parsed[1..5] = expression_parts[0..4];
+                    } else if expression_parts.len() == 6 {
+                        lazy_static! {
+                            static ref year_re: Regex = Regex::new(r"\d{4}$").unwrap();
+                        }
+                        if year_re.is_match(expression_parts[5]) {
+                            parsed[1..6] = expression_parts[0..5];
+                        } else {
+                            parsed[0..5] = expression_parts[0..5];
+                        }
+                    } else if expression_parts.len() == 7 {
+                        parsed[0..6] = expression_parts[0..6];
+                    } else {
+                        return Err(ParseException {
+                            s: expression,
+                            error_offset: 7,
+                        })
+                    }
+
+                    normalise_expression(&mut parsed, options);
+                    Ok(parsed);
+                }
+            }
+
+            fn normalise_expression(expression_parts: &mut Vec<&str>, options: &Options) {
+                expression_parts[3] = &*expression_parts[3].replace("?", "*");
+                expression_parts[5] = &*expression_parts[5].replace("?", "*");
+                expression_parts[0] = if expression_parts[0].starts_with("0/") { // seconds
+                    &*expression_parts[0].replace("0/", "*/")
+                } else {
+                    expression_parts[0]
+                };
+                expression_parts[1] = if expression_parts[1].starts_with("0/") { // minutes
+                    &*expression_parts[1].replace("0/", "*/")
+                } else {
+                    expression_parts[1]
+                };
+                expression_parts[2] = if expression_parts[2].starts_with("0/") { // hours
+                    &*expression_parts[2].replace("0/", "*/")
+                } else {
+                    expression_parts[2]
+                };
+                expression_parts[3] = if expression_parts[3].starts_with("1/") { // hours
+                    &*expression_parts[3].replace("1/", "*/")
+                } else {
+                    expression_parts[3]
+                };
+                expression_parts[4] = if expression_parts[4].starts_with("1/") { // hours
+                    &*expression_parts[4].replace("1/", "*/")
+                } else {
+                    expression_parts[4]
+                };
+                expression_parts[5] = if expression_parts[5].starts_with("1/") { // hours
+                    &*expression_parts[5].replace("1/", "*/")
+                } else {
+                    expression_parts[5]
+                };
+
+                fn is_numeric(s: &str) -> bool {
+                    let mut is_num = true;
+                    for c in s {
+                        if ! c.is_numeric() {
+                            is_num = false;
+                            break
+                        }
+                    }
+                    is_num
+                }
+
+                for i in 0..expression_parts.len() {
+                    if expression_parts[i] == "*/1" {
+                        expression_parts[i] = "*";
+                    }
+                }
+
+                if ! is_numeric(expression_parts[5]) {
+                   for i in 0..7 {
+                       expression_parts[5] = &*expression_parts[5]
+                   }
+                }
+
+
+            }
+        }
 
         pub fn get_description(description_type: DescriptionTypeEnum,
                                expression: &String,
                                options: &cronparser::Options,
                                locale: &String) -> String {
             rust_i18n::set_locale(locale);
-            let expression_parts = ExpressionParser::parse(expression, options);
+            let expression_parts = expression_parser::parse(expression, options);
             let descriptionRes = match description_type {
                 DescriptionTypeEnum::FULL => get_full_description(expression_parts, options),
                 DescriptionTypeEnum::TIMEOFDAY => {}
@@ -83,10 +227,10 @@ mod cronparser {
         pub fn get_description_1(cron: &String) -> String {
             todo!()
         }
+
         pub fn get_description_2(cron: &String, options: &cronparser::Options) -> String {
             todo!()
         }
-
     }
 }
 
@@ -392,5 +536,4 @@ mod tests {
         assert_eq!("At 5 and 6 seconds past the minute, at 1:00 AM", cron_expression_descriptor::get_description_2("5,6 0 1 * * *"));
         assert_eq!("At 5 and 6 seconds past the minute, on day 2 of the month", cron_expression_descriptor::get_description_2("5,6 0 * 2 * *"));
     }
-
 }
