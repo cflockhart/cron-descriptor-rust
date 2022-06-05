@@ -4,7 +4,11 @@ extern crate rust_i18n;
 i18n!("locales");
 
 mod date_time_utils {
+    // use datetime::{ISO, LocalTime};
+    // use datetime::fmt;
     use crate::cronparser::Options;
+    use std::collections::HashMap;
+
 
     pub fn format_time(hours_expression: &str, minutes_expression: &str, opts: &Options) -> String {
         format_time_secs(hours_expression, minutes_expression, "", opts)
@@ -14,18 +18,38 @@ mod date_time_utils {
                        minutes_expression: &str,
                        seconds_expression: &str,
                        opts: &Options) -> String {
-        let hour: u8 = hours_expression.parse().unwrap();
-        let minutes: u8 = minutes_expression.parse().unwrap();
+        let mut hour: i8 = hours_expression.parse().unwrap();
+        let mut period: String = "".to_string();
 
-        if opts.twenty_four_hour_time {
-            if seconds_expression.is_empty() {
-               todo!()
+        let time_format = if ! opts.twenty_four_hour_time {
+            period = if hour >= 12 {
+                t!("PMPeriod")
             } else {
-               todo!()
+                t!("AMPeriod")
+            };
+            if ! period.len() > 0 {
+                period = " ".to_string() + &period;
             }
-        }
+            if hour > 12 {
+                hour -= 12;
+            }
+            if hour == 0 {
+                hour = 12;
+            }
+
+            let minutes = minutes_expression.parse::<i8>().unwrap().to_string();
+            let mut seconds: String = "".to_string();
+
+            if ! seconds_expression.is_empty() {
+                seconds = ":".to_string() + &seconds_expression.parse::<i8>().unwrap().to_string();
+                seconds = format!("{:0>4}", seconds);
+            }
+
+
+        };
         todo!()
     }
+
 
     pub fn format_minutes(minutes_expression: &str) -> String {
         todo!()
@@ -85,65 +109,85 @@ mod cronparser {
 
     pub mod cron_expression_descriptor {
         use crate::cronparser;
-        use crate::cronparser::DescriptionTypeEnum;
+        use crate::cronparser::{DescriptionTypeEnum, Options};
         use crate::cronparser::DescriptionTypeEnum::FULL;
         use regex::Regex;
+        use string_builder::Builder;
 
         const SPECIAL_CHARACTERS: [char; 4] = ['/', '-', ',', '*'];
 
+        #[derive(Debug)]
         pub struct ParseException {
             s: &'static str,
             error_offset: u8,
         }
 
         mod expression_parser {
+            /* Cron reference
+      ┌───────────── minute (0 - 59)
+      │ ┌───────────── hour (0 - 23)
+      │ │ ┌───────────── day of month (1 - 31)
+      │ │ │ ┌───────────── month (1 - 12)
+      │ │ │ │ ┌───────────── day of week (0 - 6) (Sunday to Saturday; 7 is also Sunday on some systems)
+      │ │ │ │ │
+      │ │ │ │ │
+      │ │ │ │ │
+      * * * * *  command to execute
+     */
+
+            use std::collections::HashMap;
+            use chrono::Weekday;
             use lazy_static::lazy_static;
             use regex::Regex;
             use crate::cronparser::cron_expression_descriptor::ParseException;
             use crate::cronparser::Options;
 
-            pub fn parse(expression: &String, options: &Options) -> Result<Vec<&str>, ParseException> {
-                let mut parsed: Vec<&str> = vec!["", "", "", "", "", "", ""];
+            pub fn parse(expression: String, options: Options) -> Result<Vec<&'static str>, ParseException> {
+                let mut parsed: Vec<&str> = vec![""; 7];
                 if expression.trim().is_empty() {
                     let err_msg = t!("expression_empty_exception");
                     Err(ParseException {
-                        s: err_msg,
+                        s: &err_msg,
                         error_offset: 0,
                     })
                 } else {
-                    let expression_parts = expression.trim().split(' ').collect();
+                    let expression_parts: Vec<&str> = expression.trim().split_whitespace().collect();
                     if expression_parts.len() < 5 {
                         return Err(ParseException {
-                            s: expression,
+                            s: &expression,
                             error_offset: 0,
                         })
                     } else if expression_parts.len() == 5 {
                         parsed[0] = "";
-                        parsed[1..5] = expression_parts[0..4];
+                        (1..5).for_each(|i| parsed[i] = expression_parts[i - 1]);
                     } else if expression_parts.len() == 6 {
                         lazy_static! {
                             static ref year_re: Regex = Regex::new(r"\d{4}$").unwrap();
                         }
                         if year_re.is_match(expression_parts[5]) {
-                            parsed[1..6] = expression_parts[0..5];
+                            (1..6).for_each(|i| parsed[i] = expression_parts[i - 1]);
                         } else {
-                            parsed[0..5] = expression_parts[0..5];
+                            (0..5).for_each(|i| parsed[i] = expression_parts[i]);
                         }
                     } else if expression_parts.len() == 7 {
-                        parsed[0..6] = expression_parts[0..6];
+                        (0..6).for_each(|i| parsed[i] = expression_parts[i]);
                     } else {
                         return Err(ParseException {
-                            s: expression,
+                            s: &expression,
                             error_offset: 7,
                         })
                     }
 
                     normalise_expression(&mut parsed, options);
-                    Ok(parsed);
+                    Ok(parsed)
                 }
             }
 
-            fn normalise_expression(expression_parts: &mut Vec<&str>, options: &Options) {
+            fn normalise_expression(expression_parts: &mut Vec<&str>, options: Options) {
+                static DAYS_OF_WEEK_ARR: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                static MONTHS_ARR: [&str; 12] = ["JAN","FEB","MAR","APR","MAY","JUN",
+                    "JUL","AUG","SEP","OCT","NOV","DEC"];
+
                 expression_parts[3] = &*expression_parts[3].replace("?", "*");
                 expression_parts[5] = &*expression_parts[5].replace("?", "*");
                 expression_parts[0] = if expression_parts[0].starts_with("0/") { // seconds
@@ -178,14 +222,12 @@ mod cronparser {
                 };
 
                 fn is_numeric(s: &str) -> bool {
-                    let mut is_num = true;
-                    for c in s {
-                        if ! c.is_numeric() {
-                            is_num = false;
-                            break
+                    for c in s.chars() {
+                        if !c.is_numeric() {
+                            return false;
                         }
                     }
-                    is_num
+                    return true;
                 }
 
                 for i in 0..expression_parts.len() {
@@ -193,40 +235,196 @@ mod cronparser {
                         expression_parts[i] = "*";
                     }
                 }
+/*
 
-                if ! is_numeric(expression_parts[5]) {
-                   for i in 0..7 {
-                       expression_parts[5] = &*expression_parts[5]
-                   }
+        // convert SUN-SAT format to 0-6 format
+        if(!StringUtils.isNumeric(expressionParts[5])) {
+            for (int i = 0; i <= 6; i++) {
+                expressionParts[5] = expressionParts[5].replace(DateAndTimeUtils.getDayOfWeekName(i + 1), String.valueOf(i));
+            }
+        }
+
+        // convert JAN-DEC format to 1-12 format
+        if(!StringUtils.isNumeric(expressionParts[4])) {
+            for (int i = 1; i <= 12; i++) {
+                DateTime currentMonth = new DateTime().withDayOfMonth(1).withMonthOfYear(i);
+                String currentMonthDescription = currentMonth.toString("MMM", Locale.ENGLISH).toUpperCase();
+                expressionParts[4] = expressionParts[4].replace(currentMonthDescription, String.valueOf(i));
+            }
+        }
+
+        // convert 0 second to (empty)
+        if ("0".equals(expressionParts[0])) {
+            expressionParts[0] = StringUtils.EMPTY;
+        }
+
+        // convert 0 DOW to 7 so that 0 for Sunday in zeroBasedDayOfWeek is valid
+        if((options == null || options.isZeroBasedDayOfWeek()) && "0".equals(expressionParts[5])) {
+            expressionParts[5] = "7";
+        }
+ */
+                if !is_numeric(expression_parts[5]) {
+                    for i in 0..=6 {
+                        expression_parts[5] = &*expression_parts[5].replace(DAYS_OF_WEEK_ARR[i], i.to_string().as_str() );
+                    }
                 }
 
+                if !is_numeric(expression_parts[4]) {
+                    for i in 0..=11 {
+                        expression_parts[4] = &*expression_parts[4].replace(MONTHS_ARR[i], i.to_string().as_str() );
+                    }
+                }
+
+                // convert 0 second to (empty)
+                if "0" == expression_parts[0] {
+                    expression_parts[0] = "";
+                }
+
+                // convert 0 DOW to 7 so that 0 for Sunday in zeroBasedDayOfWeek is valid
+                // this logic is copied from the Java version and seems different than the C#
+                // version.
+                if options.zero_based_day_of_week && "0" == expression_parts[5] {
+                    expression_parts[5] = "7";
+                }
+
+                // Bunch of logic in the C# version is missing from the Java version,
+                // such as regex handling of the DOW, stepping and between ranges.
 
             }
         }
 
         pub fn get_description(description_type: DescriptionTypeEnum,
-                               expression: &String,
-                               options: &cronparser::Options,
-                               locale: &String) -> String {
-            rust_i18n::set_locale(locale);
-            let expression_parts = expression_parser::parse(expression, options);
-            let descriptionRes = match description_type {
-                DescriptionTypeEnum::FULL => get_full_description(expression_parts, options),
-                DescriptionTypeEnum::TIMEOFDAY => {}
-                DescriptionTypeEnum::SECONDS => {}
-                DescriptionTypeEnum::MINUTES => {}
-                DescriptionTypeEnum::HOURS => {}
-                DescriptionTypeEnum::DAYOFWEEK => {}
-                DescriptionTypeEnum::MONTH => {}
-                DescriptionTypeEnum::DAYOFMONTH => {}
-                DescriptionTypeEnum::YEAR => {}
+                               expression: String,
+                               options: cronparser::Options,
+                               locale: String) -> String {
+            rust_i18n::set_locale(&locale);
+            let expression_parts = expression_parser::parse(expression, options).unwrap();
+            // TODO fill out the rest of the get* functions.
+            let description_res = match description_type {
+                FULL => get_full_description(expression_parts, options),
+                TIMEOFDAY => get_time_of_day_description(&expression_parts, options),
+                SECONDS => get_seconds_description(&expression_parts, options),
+                MINUTES => get_minutes_description(&expression_parts, options),
+                HOURS => get_hours_description(&expression_parts, options),
+                DAYOFWEEK => get_day_of_week_description(&expression_parts, options),
+                MONTH => get_month_description(&expression_parts, options),
+                DAYOFMONTH => get_day_of_month_description(&expression_parts, options),
+                YEAR => get_year_description(&expression_parts, options)
             };
+            description_res
+        }
+
+        // TODO 2022-04-23 fill out these get*description functions and drill down to fill it all out.
+
+        // From the C# code, not Java.
+        fn get_full_description(expression_parts: Vec<&str>, options: Options) -> String {
+            let time_segment = get_time_of_day_description(&expression_parts, options);
+            let day_of_month_desc = get_day_of_month_description(&expression_parts,options);
+            let month_desc = get_month_description(&expression_parts,options);
+            let day_of_week_desc = get_day_of_week_description(&expression_parts,options);
+            let year_desc = get_year_description(&expression_parts,options);
+            let desc1 = format!("{0}{1}{2}{3}{4}",
+                                time_segment,
+                                day_of_month_desc,
+                                day_of_week_desc,
+                                month_desc,
+                                year_desc);
+            let desc2 = transform_verbosity(desc1, options);
+            transform_case(&desc2, options)
+        }
+
+
+
+        fn transform_verbosity(description: String, options: Options) -> String {
+           let mut desc_temp = description.clone();
+           if !options.verbose {
+                desc_temp = desc_temp.replace(&t!("messages.every_minute"), &t!("every_minute"));
+               desc_temp = desc_temp.replace(&t!("messages.every_1_hour"), &t!("every_hour"));
+
+           }
+            desc_temp
+        }
+
+        fn transform_case(description: &str, options: Options) -> String {
+            match options.casing_type {
+                Sentence=> description[0..1].to_uppercase() + &description[1..],
+                    Title => description[0..1].to_uppercase() + &description[1..],
+                Lowercase => description.to_lowercase()
+            }
+        }
+
+        fn get_year_description(expression_parts: &Vec<&str>, options: Options) -> String {
             todo!()
         }
 
-        pub fn get_description_1(cron: &String) -> String {
+        fn get_day_of_week_description(expression_parts: &Vec<&str>, options: Options) -> String {
             todo!()
         }
+
+        fn get_minutes_description(expression_parts: &Vec<&str>, options: Options) -> String {
+            todo!()
+        }
+
+        fn get_seconds_description(expression_parts: &Vec<&str>, options: Options) -> String {
+            todo!()
+        }
+
+        fn get_hours_description(expression_parts: &Vec<&str>, options: Options) -> String {
+            todo!()
+        }
+
+        fn get_month_description(expression_parts: &Vec<&str>, options: Options) -> String {
+            todo!()
+        }
+
+        fn get_day_of_month_description(expression_parts: &Vec<&str>, options: Options) -> String {
+            todo!()
+        }
+
+        fn get_time_of_day_description(expression_parts: &Vec<&str>, options: Options) -> String {
+            let seconds_expression = expression_parts[0];
+            let minutes_expression = expression_parts[1];
+            let hours_expression = expression_parts[2];
+
+            let mut description = Builder::default();
+
+            if minutes_expression.chars().all(|c| ! SPECIAL_CHARACTERS.contains(&c))
+                && hours_expression.chars().all(|c| ! SPECIAL_CHARACTERS.contains(&c))
+                && seconds_expression.chars().all(|c| ! SPECIAL_CHARACTERS.contains(&c)) {
+                description.append(t!("at"));
+                if options.need_space_between_words {
+                    description.append(" ");
+                }
+                description.append()
+
+            }
+
+            description.string().unwrap()
+
+        }
+
+        pub fn format_time(hours_expression:  &str,
+                           minutes_expression: &str,
+                           seconds_expression: &str,
+                           options: &Options) -> String {
+
+            let hour = hours_expression.parse::<i32>().unwrap();
+            let minutes = minutes_expression.parse::<i32>().unwrap();
+            let mut period = "";
+
+            if ! options.twenty_four_hour_time {
+                let ampm = if hour >= 12 {
+                    "PMPeriod"
+                } else {
+                    "AMPeriod"
+                };
+                period = t!(ampm);
+
+            }
+
+        }
+
+        pub fn get_description_1(cron: &String) -> String { todo!() }
 
         pub fn get_description_2(cron: &String, options: &cronparser::Options) -> String {
             todo!()

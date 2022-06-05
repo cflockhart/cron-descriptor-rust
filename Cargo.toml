@@ -9,6 +9,8 @@ edition = "2021"
 lazy_static = "1.4.0"
 rust-i18n = "0"
 regex = "1.5.4"
+chrono = "0.4"
+string-builder = "0.2.0"
 
 [package.metadata.i18n]
 # The available locales for your application, default: ["en"].
