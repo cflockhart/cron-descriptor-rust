@@ -11,6 +11,8 @@ rust-i18n = "0"
 regex = "1.5.4"
 chrono = "0.4"
 string-builder = "0.2.0"
+strfmt = "0.1.6"
+substring = "1.4.5"
 
 [package.metadata.i18n]
 # The available locales for your application, default: ["en"].
