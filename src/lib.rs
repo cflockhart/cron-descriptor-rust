@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate rust_i18n;
+#[macro_use]
+extern crate strfmt;
 
 mod description_builder;
 
@@ -43,9 +45,9 @@ mod date_time_utils {
 
         if !opts.twenty_four_hour_time {
             period = if hour >= 12 {
-                t!("PMPeriod")
+                t!("time_pm")
             } else {
-                t!("AMPeriod")
+                t!("time_am")
             };
             if !period.len() > 0 {
                 period = " ".to_string() + &period;
