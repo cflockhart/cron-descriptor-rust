@@ -1,32 +1,100 @@
 use std::collections::HashMap;
+use lazy_static::lazy_static;
 use crate::cronparser::Options;
-use crate::string_utils;
+use crate::{format_minutes, string_utils};
 use crate::date_time_utils;
 use substring::Substring;
 
-use strfmt::FmtError;
+
 use strfmt::{strfmt, strfmt_builder};
-use crate::date_time_utils::format_time;
+use string_builder::Builder;
+use crate::date_time_utils::{format_time, MONTHS_ARR};
 
 i18n!("locales");
 
 const SPECIAL_CHARACTERS_MINUS_STAR: [char; 3] = ['/', '-', ','];
 
-trait DescriptionBuilder {
+pub trait DescriptionBuilder<'a> {
     fn get_segment_description(&self, expression: &String, all_description: String) -> String {
-         if expression.is_empty() {
-             "".to_string()
-         } else if expression == "*" {
-             all_description
-         } else if string_utils::not_contains_any(expression, &SPECIAL_CHARACTERS_MINUS_STAR)  {
-             let gdf = self.get_description_format(expression);
-             let sid = self.get_single_item_description(expression);
-             let mut vars = HashMap::new();
-             vars.insert("0".to_string(), sid);
-             strfmt(&gdf, &vars).unwrap()
-         } else {
-             "".to_string()
-         }
+        let description = if expression.is_empty() {
+            "".to_string()
+        } else if expression == "*" {
+            all_description
+        } else if string_utils::not_contains_any(expression, &SPECIAL_CHARACTERS_MINUS_STAR) {
+            let gdf = self.get_description_format(expression);
+            let sid = self.get_single_item_description(expression);
+            let mut vars = HashMap::new();
+            vars.insert("0".to_string(), sid);
+            strfmt(&gdf, &vars).unwrap()
+        } else if expression.contains("/") {
+            let segments = expression.split("/").collect::<Vec<_>>();
+            let gidf = self.get_interval_description_format(&segments[1].to_string());
+            let gsid = self.get_single_item_description(&segments[1].to_string());
+            let gsid2 = gsid.clone();
+            let mut vars = HashMap::new();
+            vars.insert("0".to_string(), gsid);
+            let tmpstr = strfmt(&gidf, &vars).unwrap();
+            if segments[0].contains("-") {
+                let between_segments_of_interval = segments[0].to_string();
+                let between_segments = between_segments_of_interval.split("-").collect::<Vec<_>>();
+                let gbdf = self.get_between_description_format(&between_segments_of_interval, false);
+                let sid0 = self.get_single_item_description(&between_segments[0].to_string());
+                let sid1 = self.get_single_item_description(&between_segments[1].to_string());
+                let mut vars = HashMap::new();
+                vars.insert("0".to_string(), sid0);
+                vars.insert("1".to_string(), sid1);
+                format!("{}, {}", tmpstr, strfmt(&gbdf, &vars).unwrap())
+            } else {
+                println!("gidf: {}, gsid: {}", gidf, gsid2);
+                tmpstr
+            }
+        } else if expression.contains(",") {
+            let segments = expression.split(",").collect::<Vec<_>>();
+            let mut description_content = Builder::default();
+            for i in 0..segments.len() {
+                if i > 0 && segments.len() > 2 {
+                    if i < segments.len() - 1 {
+                        description_content.append(", ");
+                    }
+                }
+                if i > 0 && segments.len() > 1 && (i == segments.len() - 1 || segments.len() == 2) {
+                    if self.need_space_between_words() {
+                        description_content.append(" ");
+                    }
+                    description_content.append(t!("and"));
+                    if self.need_space_between_words() {
+                        description_content.append(" ");
+                    }
+                    if segments[i].contains("-") {
+                        let between_segments = segments[i].split("-").collect::<Vec<_>>();
+                        let gbdf = self.get_between_description_format(expression, true);
+                        let sid0 = self.get_single_item_description(&between_segments[0].to_string());
+                        let sid1 = self.get_single_item_description(&between_segments[1].to_string());
+                        let mut vars = HashMap::new();
+                        vars.insert("0".to_string(), sid0);
+                        vars.insert("1".to_string(), sid1);
+                        description_content.append(format!(", {}", strfmt(&gbdf, &vars).unwrap()));
+                    } else {
+                       description_content.append(self.get_single_item_description(&segments[i].to_string()));
+                    }
+                }
+            }
+            let mut vars = HashMap::new();
+            vars.insert("0".to_string(), description_content.string().unwrap());
+            strfmt(&self.get_description_format(expression), &vars).unwrap()
+        } else if expression.contains("-") {
+            let segments= expression.split("-").collect::<Vec<_>>();
+            let gbdf = self.get_between_description_format(expression, false);
+            let sid0 = self.get_single_item_description(&segments[0].to_string());
+            let sid1 = self.get_single_item_description(&segments[1].to_string());
+            let mut vars = HashMap::new();
+            vars.insert("0".to_string(), sid0);
+            vars.insert("1".to_string(), sid1);
+            format!(", {}", strfmt(&gbdf, &vars).unwrap())
+        } else {
+            "".to_string()
+        };
+        description
     }
 
     fn get_between_description_format(&self, expression: &String, omit_separator: bool) -> String;
@@ -45,11 +113,12 @@ trait DescriptionBuilder {
 
     fn get_space(&self) -> String;
 
-    fn plural_num<'a>(num: i8, singular: &'a String, plural: &'a String) -> &'a String {
+    fn plural_num(num: i8, singular: &'a String, plural: &'a String) -> &'a String {
         Self::plural(&num.to_string(), singular, plural)
     }
 
-    fn plural<'a>(expression: &String, singular: &'a String, plural: &'a String) -> &'a String {
+
+    fn plural(expression: &String, singular: &'a String, plural: &'a String) -> &'a String {
         let parsed_expr = expression.parse::<i8>();
         if parsed_expr.is_ok() && parsed_expr.unwrap() > 1 {
             plural
@@ -59,37 +128,45 @@ trait DescriptionBuilder {
             singular
         }
     }
+
+    fn min_plural(expression: &String) -> String {
+        lazy_static! {
+            static ref MINUTE: String = t!("minute");
+            static ref MINUTES: String = t!("minutes");
+        }
+        Self::plural(expression, &MINUTE, &MINUTES).to_string()
+    }
 }
 
-struct DayOfMonthDescriptionBuilder {
-    options: Options
+pub struct DayOfMonthDescriptionBuilder<'a> {
+    pub options: &'a Options,
 }
 
-struct DayOfWeekDescriptionBuilder {
-    options: Options
+pub struct DayOfWeekDescriptionBuilder<'a> {
+    pub options: &'a Options,
 }
 
-struct HoursDescriptionBuilder {
-    options: Options
+pub struct HoursDescriptionBuilder<'a> {
+    pub options: &'a Options,
 }
 
-struct MinutesDescriptionBuilder {
-    options: Options
+pub struct MinutesDescriptionBuilder<'a> {
+    pub options: &'a Options,
 }
 
-struct MonthDescriptionBuilder {
-    options: Options
+pub struct MonthDescriptionBuilder<'a> {
+    pub options: &'a Options,
 }
 
-struct SecondsDescriptionBuilder {
-    options: Options
+pub struct SecondsDescriptionBuilder<'a> {
+    pub options: &'a Options,
 }
 
-struct YearDescriptionBuilder {
-    options: Options
+pub struct YearDescriptionBuilder<'a> {
+    pub options: &'a Options,
 }
 
-impl DescriptionBuilder for DayOfMonthDescriptionBuilder {
+impl DescriptionBuilder<'_> for DayOfMonthDescriptionBuilder<'_> {
     fn get_between_description_format(&self, expression: &String, omit_separator: bool) -> String {
         let format = t!("between_days_of_the_month");
         if omit_separator {
@@ -99,7 +176,7 @@ impl DescriptionBuilder for DayOfMonthDescriptionBuilder {
         }
     }
 
-    fn get_interval_description_format(self: &Self , expression: &String) -> String {
+    fn get_interval_description_format(self: &Self, expression: &String) -> String {
         // return ", "+I18nMessages.get("every_x")+ getSpace(options) + plural(expression, I18nMessages.get("day"), I18nMessages.get("days"));
         ", ".to_string() + &t!("every_x") + &self.get_space() + &Self::plural(expression, &t!("day"), &t!("days"))
     }
@@ -119,7 +196,7 @@ impl DescriptionBuilder for DayOfMonthDescriptionBuilder {
     }
 }
 
-impl DescriptionBuilder for DayOfWeekDescriptionBuilder {
+impl DescriptionBuilder<'_> for DayOfWeekDescriptionBuilder<'_> {
     fn get_between_description_format(&self, expression: &String, omit_separator: bool) -> String {
         // MessageFormat.format(", "+I18nMessages.get("interval_description_format"), expression);
         format!("{} {}", ",", t!("messages.interval_description_format", 0 = expression))
@@ -192,7 +269,7 @@ impl DescriptionBuilder for DayOfWeekDescriptionBuilder {
     }
 }
 
-impl DescriptionBuilder for HoursDescriptionBuilder {
+impl DescriptionBuilder<'_> for HoursDescriptionBuilder<'_> {
     fn get_between_description_format(&self, expression: &String, omit_separator: bool) -> String {
         t!("messages.between_x_and_y")
     }
@@ -224,25 +301,33 @@ impl DescriptionBuilder for HoursDescriptionBuilder {
     }
 }
 
-impl DescriptionBuilder for MinutesDescriptionBuilder {
+impl DescriptionBuilder<'_> for MinutesDescriptionBuilder<'_> {
     fn get_between_description_format(&self, expression: &String, omit_separator: bool) -> String {
-        todo!()
+        t!("messages.minutes_through_past_the_hour")
     }
 
     fn get_interval_description_format(&self, expression: &String) -> String {
-        todo!()
+        // return MessageFormat.format(I18nMessages.get("every_x") + getSpace(options) + minPlural(expression), expression);
+        let gdf = t!("messages.every_x") + &self.get_space() + &Self::min_plural(expression);
+        let mut vars = HashMap::new();
+        vars.insert("0".to_string(), expression.to_string());
+        strfmt(&gdf, &vars).unwrap()
     }
 
     fn get_single_item_description(&self, expression: &String) -> String {
-        todo!()
+        format_minutes(expression)
     }
 
     fn get_description_format(&self, expression: &String) -> String {
-        todo!()
+        if expression == "0" {
+            t!("messages.at_x") + &self.get_space() + &Self::min_plural(expression)
+        } else {
+            self.get_space() + &t!("messages.past_the_hour")
+        }
     }
 
     fn need_space_between_words(&self) -> bool {
-        todo!()
+        self.options.need_space_between_words
     }
 
     fn get_space(&self) -> String {
@@ -250,25 +335,47 @@ impl DescriptionBuilder for MinutesDescriptionBuilder {
     }
 }
 
-impl DescriptionBuilder for MonthDescriptionBuilder {
+impl DescriptionBuilder<'_> for MonthDescriptionBuilder<'_> {
     fn get_between_description_format(&self, expression: &String, omit_separator: bool) -> String {
-        todo!()
+        let format = t!("messages.between_description_format");
+        if omit_separator {
+            format
+        } else {
+            format!(", {}", format)
+        }
     }
 
     fn get_interval_description_format(&self, expression: &String) -> String {
-        todo!()
+        // MessageFormat.format(", "+I18nMessages.get("every_x")+ getSpace(options) +
+        //   plural(expression, I18nMessages.get("month"), I18nMessages.get("months")), expression
+        // let gdf = t!("messages.every_x") + &self.get_space() + &Self::plural(expression, &t!("hour"), &t!("hours"));
+        let month_str = t!("month");
+        let months_str = t!("months");
+        let plural_str = Self::plural(expression, &month_str, &months_str);
+        let gdf = format!(", {}{}{}", t!("messages.every_x"), self.get_space(), plural_str);
+
+        let mut vars = HashMap::new();
+        vars.insert("0".to_string(), expression.to_string());
+        strfmt(&gdf, &vars).unwrap()
     }
 
     fn get_single_item_description(&self, expression: &String) -> String {
-        todo!()
+
+        // What is this doing?
+        // gets the long month name of the year with the integer value of "expression"
+        // return new DateTime().withDayOfMonth(1).withMonthOfYear(Integer.parseInt(expression)).
+        //     toString("MMMM", I18nMessages.getCurrentLocale());
+        let month_num = expression.parse::<usize>().unwrap();
+        let month_key = MONTHS_ARR[month_num];
+        t!(month_key)
     }
 
     fn get_description_format(&self, expression: &String) -> String {
-        todo!()
+        format!(", {}", t!("messages.only_in_month"))
     }
 
     fn need_space_between_words(&self) -> bool {
-        todo!()
+        self.options.need_space_between_words
     }
 
     fn get_space(&self) -> String {
@@ -276,25 +383,26 @@ impl DescriptionBuilder for MonthDescriptionBuilder {
     }
 }
 
-impl DescriptionBuilder for SecondsDescriptionBuilder {
+impl DescriptionBuilder<'_> for SecondsDescriptionBuilder<'_> {
     fn get_between_description_format(&self, expression: &String, omit_separator: bool) -> String {
-        todo!()
+        t!("messages.seconds_through_past_the_minute")
     }
 
     fn get_interval_description_format(&self, expression: &String) -> String {
-        todo!()
+        t!("messages.every_x_seconds")
+        // MessageFormat.format(I18nMessages.get("every_x_seconds"), expression);
     }
 
     fn get_single_item_description(&self, expression: &String) -> String {
-        todo!()
+        expression.to_string()
     }
 
     fn get_description_format(&self, expression: &String) -> String {
-        todo!()
+        t!("messages.at_x_seconds_past_the_minute")
     }
 
     fn need_space_between_words(&self) -> bool {
-        todo!()
+        self.options.need_space_between_words
     }
 
     fn get_space(&self) -> String {
@@ -302,25 +410,47 @@ impl DescriptionBuilder for SecondsDescriptionBuilder {
     }
 }
 
-impl DescriptionBuilder for YearDescriptionBuilder {
+impl DescriptionBuilder<'_> for YearDescriptionBuilder<'_> {
     fn get_between_description_format(&self, expression: &String, omit_separator: bool) -> String {
-        todo!()
+        let format = t!("messages.between_description_format");
+        if omit_separator {
+            format
+        } else {
+            format!(", {}", format)
+        }
     }
 
     fn get_interval_description_format(&self, expression: &String) -> String {
-        todo!()
+        // return MessageFormat.format(", " + I18nMessages.get("every_x")+ getSpace(options) +
+        //                                 plural(expression, I18nMessages.get("year"), I18nMessages.get("years")), expression);
+        // let month_str = t!("month");
+        // let months_str = t!("months");
+        // let plural_str = Self::plural(expression, &month_str, &months_str);
+        // let gdf = format!(", {}{}{}", t!("messages.every_x"), self.get_space(), plural_str);
+        //
+        // let mut vars = HashMap::new();
+        // vars.insert("0".to_string(), expression.to_string());
+        // strfmt(&gdf, &vars).unwrap()
+        let year_str = t!("year");
+        let years_str = t!("years");
+        let plural_str = Self::plural(expression, &year_str, &years_str);
+        let gdf = format!(", {}{}{}", t!("messages.every_x"), self.get_space(), plural_str);
+        let mut vars = HashMap::new();
+        vars.insert("0".to_string(), expression.to_string());
+        strfmt(&gdf, &vars).unwrap()
     }
 
     fn get_single_item_description(&self, expression: &String) -> String {
-        todo!()
+        // return new DateTime().withYear(Integer.parseInt(expression)).toString("yyyy", I18nMessages.getCurrentLocale());
+        expression.parse::<u16>().unwrap().to_string()
     }
 
     fn get_description_format(&self, expression: &String) -> String {
-        todo!()
+        format!(", {}", t!("messages.only_in_year"))
     }
 
     fn need_space_between_words(&self) -> bool {
-        todo!()
+        self.options.need_space_between_words
     }
 
     fn get_space(&self) -> String {

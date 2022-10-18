@@ -1,16 +1,17 @@
 #[macro_use]
 extern crate rust_i18n;
-#[macro_use]
 extern crate strfmt;
 
-mod description_builder;
+use string_builder::Builder;
 
+mod description_builder;
+mod test;
 
 i18n!("locales");
 
 mod string_utils {
     pub fn not_contains_any(str: &String, chars: &[char]) -> bool {
-        str.chars().all(|c| ! chars.contains(&c))
+        str.chars().all(|c| !chars.contains(&c))
     }
 
     pub fn is_numeric(s: &str) -> bool {
@@ -22,12 +23,13 @@ mod string_utils {
         return true;
     }
 }
-mod date_time_utils {
-    static DAYS_OF_WEEK_ARR: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    static MONTHS_ARR: [&str; 12] = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-        "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
-    use chrono::Weekday;
+mod date_time_utils {
+    pub static DAYS_OF_WEEK_ARR: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    pub static MONTHS_ARR: [&str; 12] = ["january", "february", "march", "april", "may", "june",
+        "july", "august", "september", "october", "november", "december"];
+
+
     // use datetime::{ISO, LocalTime};
     // use datetime::fmt;
     use crate::cronparser::Options;
@@ -68,12 +70,11 @@ mod date_time_utils {
             seconds = format!("{:0>2}", seconds);
         }
 
-        format!("{0}:{1}{2}{3}", format!("{:0>2}", hour), format!("{:0>2}", minutes), seconds, period)
+        format!("{0}:{1}{2}{3}", format!("{}", hour), format!("{:0>2}", minutes), seconds, period)
     }
 
 
     pub fn get_day_of_week_name(day_of_week: usize) -> String {
-        use chrono::Weekday;
         let day_str = DAYS_OF_WEEK_ARR[day_of_week % 7];
         t!(day_str)
     }
@@ -81,7 +82,17 @@ mod date_time_utils {
 
 
 pub fn format_minutes(minutes_expression: &str) -> String {
-    todo!()
+    if minutes_expression.contains(",") {
+        let mparts = minutes_expression.split(",");
+        let mut formatted_expression = Builder::default();
+        for mpt in mparts {
+            formatted_expression.append(format!("{:02}", mpt));
+            formatted_expression.append(",");
+        }
+        formatted_expression.string().unwrap()
+    } else {
+        format!("{:02}", minutes_expression.to_string())
+    }
 }
 
 mod cronparser {
@@ -136,11 +147,15 @@ mod cronparser {
 
 
     pub mod cron_expression_descriptor {
+        use std::collections::HashMap;
+        use lazy_static::lazy_static;
         use string_builder::Builder;
 
         use crate::cronparser;
         use crate::cronparser::{CasingTypeEnum, DescriptionTypeEnum, Options};
         use crate::date_time_utils::{format_time, format_time_secs};
+        use crate::description_builder::{DayOfMonthDescriptionBuilder, DayOfWeekDescriptionBuilder, HoursDescriptionBuilder, MinutesDescriptionBuilder, MonthDescriptionBuilder, SecondsDescriptionBuilder, YearDescriptionBuilder};
+        use crate::description_builder::DescriptionBuilder;
 
         const SPECIAL_CHARACTERS: [char; 4] = ['/', '-', ',', '*'];
 
@@ -166,20 +181,20 @@ mod cronparser {
 
 
             use lazy_static::lazy_static;
-            use regex::Regex;
 
             use crate::cronparser::cron_expression_descriptor::ParseException;
             use crate::cronparser::Options;
+            use regex::Regex;
 
             pub fn parse(expression: String, options: &Options) -> Result<Vec<String>, ParseException> {
                 let mut parsed: Vec<&str> = vec![""; 7];
                 if expression.trim().is_empty() {
                     lazy_static! {
-                        static ref err_str: String = t!("expression_empty_exception");
+                        static ref ERR_STR: String = t!("expression_empty_exception");
                     }
                     let result = Err(ParseException {
                         s: expression,
-                        error_offset: 0
+                        error_offset: 0,
                     });
                     result
                 } else {
@@ -187,7 +202,7 @@ mod cronparser {
                     if expression_parts.len() < 5 {
                         let result1 = Err(ParseException {
                             s: expression,
-                            error_offset: 0
+                            error_offset: 0,
                         });
                         return result1;
                     } else if expression_parts.len() == 5 {
@@ -207,7 +222,7 @@ mod cronparser {
                     } else {
                         let result2 = Err(ParseException {
                             s: expression,
-                            error_offset: 7
+                            error_offset: 7,
                         });
                         return result2;
                     }
@@ -330,14 +345,13 @@ mod cronparser {
 
         pub fn get_description(description_type: DescriptionTypeEnum,
                                expression: String,
-                               options: &cronparser::Options,
+                               options: &Options,
                                locale: String) -> String {
             rust_i18n::set_locale(&locale);
             let expression_parts = expression_parser::parse(expression, options).unwrap();
-            // TODO fill out the rest of the get* functions.
 
             let description_res = match description_type {
-                DescriptionTypeEnum::FULL => get_full_description(expression_parts, options),
+                DescriptionTypeEnum::FULL => get_full_description(&expression_parts, options),
                 DescriptionTypeEnum::TIMEOFDAY => get_time_of_day_description(&expression_parts, options),
                 DescriptionTypeEnum::SECONDS => get_seconds_description(&expression_parts, options),
                 DescriptionTypeEnum::MINUTES => get_minutes_description(&expression_parts, options),
@@ -353,18 +367,24 @@ mod cronparser {
         // TODO 2022-04-23 fill out these get*description functions and drill down to fill it all out.
 
         // From the C# code, not Java.
-        fn get_full_description(expression_parts: Vec<String>, options: &Options) -> String {
+        fn get_full_description(expression_parts: &Vec<String>, options: &Options) -> String {
             let time_segment = get_time_of_day_description(&expression_parts, options);
             let day_of_month_desc = get_day_of_month_description(&expression_parts, options);
             let month_desc = get_month_description(&expression_parts, options);
             let day_of_week_desc = get_day_of_week_description(&expression_parts, options);
             let year_desc = get_year_description(&expression_parts, options);
-            let desc1 = format!("{0}{1}{2}{3}{4}",
+            let week_or_month_desc = if "*" == &expression_parts[3] {
+                day_of_week_desc
+            } else {
+                day_of_month_desc
+            };
+            let desc1 = format!("{0}{1}{2}{3}",
                                 time_segment,
-                                day_of_month_desc,
-                                day_of_week_desc,
+                                week_or_month_desc,
                                 month_desc,
                                 year_desc);
+            eprintln!("time: {}; day_of_month: {}; month: {}; year: {}",
+                      time_segment, week_or_month_desc, month_desc, year_desc);
             let desc2 = transform_verbosity(desc1, options);
             transform_case(&desc2, options)
         }
@@ -373,8 +393,13 @@ mod cronparser {
         fn transform_verbosity(description: String, options: &Options) -> String {
             let mut desc_temp = description.clone();
             if !options.verbose {
-                desc_temp = desc_temp.replace(&t!("messages.every_minute"), &t!("every_minute"));
-                desc_temp = desc_temp.replace(&t!("messages.every_1_hour"), &t!("every_hour"));
+                desc_temp = desc_temp.replace(&t!("messages.every_1_minute"), &t!("messages.every_minute"));
+                desc_temp = desc_temp.replace(&t!("messages.every_1_hour"), &t!("messages.every_hour"));
+                desc_temp = desc_temp.replace(&t!("messages.every_1_day"), &t!("messages.every_day"));
+                desc_temp = desc_temp.replace(&format!(", {}", &t!("messages.every_minute")), "");
+                desc_temp = desc_temp.replace(&format!(", {}", &t!("messages.every_hour")), "");
+                desc_temp = desc_temp.replace(&format!(", {}", &t!("messages.every_day")), "");
+                desc_temp = desc_temp.replace(&format!(", {}", &t!("messages.every_year")), "");
             }
             desc_temp
         }
@@ -388,32 +413,74 @@ mod cronparser {
         }
 
         fn get_year_description(expression_parts: &Vec<String>, options: &Options) -> String {
-            todo!()
+            let builder = YearDescriptionBuilder { options };
+            builder.get_segment_description(&expression_parts[6],
+                                            format!(", {}", t!("messages.every_year")))
         }
 
         fn get_day_of_week_description(expression_parts: &Vec<String>, options: &Options) -> String {
-            todo!()
+            let builder = DayOfWeekDescriptionBuilder { options };
+            println!("in get_day_of_week_description");
+            builder.get_segment_description(&expression_parts[5],
+                                            format!(", {}", t!("messages.every_day")))
         }
 
         fn get_minutes_description(expression_parts: &Vec<String>, options: &Options) -> String {
-            todo!()
+            let builder = MinutesDescriptionBuilder { options };
+            builder.get_segment_description(&expression_parts[1],
+                                            t!("messages.every_minute"))
         }
 
         fn get_seconds_description(expression_parts: &Vec<String>, options: &Options) -> String {
-            // Use the builder structure from the Java version
-            todo!()
+            let builder = SecondsDescriptionBuilder { options };
+            builder.get_segment_description(&expression_parts[0],
+                                            t!("messages.every_second"))
         }
 
         fn get_hours_description(expression_parts: &Vec<String>, options: &Options) -> String {
-            todo!()
+            let builder = HoursDescriptionBuilder { options };
+            builder.get_segment_description(&expression_parts[2],
+                                            t!("messages.every_hour"))
         }
 
         fn get_month_description(expression_parts: &Vec<String>, options: &Options) -> String {
-            todo!()
+            let builder = MonthDescriptionBuilder { options };
+            builder.get_segment_description(&expression_parts[4], "".to_string())
         }
 
         fn get_day_of_month_description(expression_parts: &Vec<String>, options: &Options) -> String {
-            todo!()
+            use regex::Regex;
+            use strfmt::strfmt;
+            let exp = expression_parts[3].replace("?", "*");
+            let description = if "L" == exp {
+                format!(", {}", t!("messages.on_the_last_day_of_the_month"))
+            } else if "WL" == exp || "LW" == exp {
+                format!(", {}", t!("messages.on_the_last_weekday_of_the_month"))
+            } else {
+                lazy_static! {
+                    static ref DOM_RE: Regex = Regex::new(r"(\dW)|(W\d)").unwrap();
+                }
+                if DOM_RE.is_match(&exp) {
+                    let capt = DOM_RE.captures_iter(&exp).next().unwrap();
+                    let no_w = capt[0].replace("W", "");
+                    let day_number = no_w.parse::<u8>().unwrap();
+                    let day_string = if day_number == 1 {
+                        t!("messages.first_weekday")
+                    } else {
+                        t!("messages.weekday_nearest_day", 0 = &no_w)
+                    };
+                    let fmt_str = format!(", {}", t!("messages.on_the_of_the_month"));
+                    let mut vars = HashMap::new();
+                    vars.insert("0".to_string(), day_string);
+                    strfmt(&fmt_str, &vars).unwrap()
+                } else {
+                    let builder = DayOfMonthDescriptionBuilder { options };
+                    eprintln!("in get_day_of_month_description");
+                    builder.get_segment_description(&exp,
+                                                    format!(", {}", t!("messages.every_day")))
+                }
+            };
+            description
         }
 
         fn get_time_of_day_description(expression_parts: &Vec<String>, options: &Options) -> String {
@@ -464,342 +531,70 @@ mod cronparser {
                         description.append(t!("and"));
                     }
                 }
-
-
             } else {
                 let seconds_description = get_seconds_description(expression_parts, options);
                 let minutes_description = get_minutes_description(expression_parts, options);
                 let hours_description = get_hours_description(expression_parts, options);
-
-
+                println!("file: {}, line: {}", file!(), line!());
+                println!("seconds_description: {} minutes_description: {}, hours_description: {}",
+                  seconds_description, minutes_description, hours_description);
+                description.append(seconds_description);
+                if description.len() > 0 && ! minutes_description.is_empty() {
+                    description.append(", ");
+                }
+                description.append(minutes_description);
+                if description.len() > 0 && ! hours_description.is_empty()  {
+                    description.append(", ");
+                }
+                description.append(hours_description);
 
             }
-            "".to_string()
-            // return description.to_string();
+            description.string().unwrap()
         }
 
-        pub fn get_description_1(cron: String) -> String { todo!() }
+        pub fn get_description_cron(expression: String) -> String {
+            println!("Expression: {}", expression);
+            get_description(DescriptionTypeEnum::FULL, expression,
+                            &Options::options(), rust_i18n::locale())
+        }
 
-        pub fn get_description_2(cron: String, options: &cronparser::Options) -> String {
-            todo!()
+        pub fn get_description_cron_options(expression: String, options: &cronparser::Options) -> String {
+            get_description(DescriptionTypeEnum::FULL, expression,
+                            options, rust_i18n::locale())
+        }
+
+        pub fn get_description_cron_locale(expression: String, locale: String) -> String {
+            get_description(DescriptionTypeEnum::FULL, expression,
+                            &Options::options(), locale)
+        }
+
+        pub fn get_description_cron_options_locale(expression: String,
+                                                   options: &Options,
+                                                   locale: String) -> String {
+            get_description(DescriptionTypeEnum::FULL, expression,
+                            options, locale)
+        }
+
+
+        pub fn get_description_cron_type_expr(desc_type: DescriptionTypeEnum,
+                                              expression: String) -> String {
+            get_description(desc_type, expression,
+                            &Options::options(), rust_i18n::locale())
+        }
+
+        pub fn get_description_cron_type_expr_locale(desc_type: DescriptionTypeEnum,
+                                                     expression: String,
+                                                     locale: String) -> String {
+            get_description(desc_type, expression,
+                            &Options::options(), locale)
+        }
+
+        pub fn get_description_cron_type_expr_opts(desc_type: DescriptionTypeEnum,
+                                                   expression: String,
+                                                   options: &Options) -> String {
+            get_description(desc_type, expression,
+                            options, rust_i18n::locale())
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    extern crate strfmt;
-
-    use std::collections::HashMap;
-
-    use strfmt::strfmt;
-
-    use crate::cronparser::cron_expression_descriptor;
-    use crate::cronparser::Options;
-
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-
-    #[test]
-    fn test_localized_text() {
-        assert_eq!("5 through 9", t!("messages.between_weekday_description_format", 0 = "5", 1 = "9"));
-        let i18 = t!("messages.on_the_day_of_the_month", 0 = "monday");
-        let nth_str = i18.replace("{nth}", "first");
-        assert_eq!("on the first monday of the month", nth_str);
-    }
-
-    #[test]
-    fn test_strfmt_text() {
-        let mut vars = HashMap::new();
-        vars.insert("name".to_string(), "Craig");
-        let i18 = t!("messages.on_the_day_of_the_month", 0 = "monday");
-        let formatted = strfmt(&i18, &vars).unwrap();
-        assert_eq!("on the Craig monday of the month", formatted);
-    }
-
-    #[test]
-    fn test_every_second() {
-        assert_eq!("Every second", cron_expression_descriptor::get_description_1(String::from("* * * * * *")));
-        assert_eq!("Every second", cron_expression_descriptor::get_description_2(String::from("* * * * * *"), &Options::twenty_four_hour()));
-    }
-
-    #[test]
-    fn test_every45seconds() {
-        assert_eq!("Every 45 seconds", cron_expression_descriptor::get_description_1("*/45 * * * * *".to_string()));
-        assert_eq!("Every 45 seconds", cron_expression_descriptor::get_description_2("*/45 * * * * *".to_string(), &Options::twenty_four_hour()));
-    }
-
-    #[test]
-    fn test_minute_span() {
-        assert_eq!("Every minute between 11:00 AM and 11:10 AM", cron_expression_descriptor::get_description_1("0-10 11 * * *".to_string()));
-        assert_eq!("Every minute between 11:00 and 11:10", cron_expression_descriptor::get_description_2("0-10 11 * * *".to_string(), &Options::twenty_four_hour()));
-        assert_eq!("Every minute, at 1:00 AM", cron_expression_descriptor::get_description_1("* 1 * * *".to_string()));
-        assert_eq!("Every minute, at 12:00 AM", cron_expression_descriptor::get_description_1("* 0 * * *".to_string()));
-    }
-
-    #[test]
-    fn test_every_minute() {
-        assert_eq!("Every minute", cron_expression_descriptor::get_description_1("* * * * *".to_string()));
-        assert_eq!("Every minute", cron_expression_descriptor::get_description_1("*/1 * * * *".to_string()));
-        assert_eq!("Every minute", cron_expression_descriptor::get_description_1("0 0/1 * * * ?".to_string()));
-    }
-
-    #[test]
-    fn test_every_hour() {
-        assert_eq!("Every hour", cron_expression_descriptor::get_description_1("0 0 * * * ?".to_string()));
-        assert_eq!("Every hour", cron_expression_descriptor::get_description_1("0 0 0/1 * * ?".to_string()));
-        assert_eq!("Every hour", cron_expression_descriptor::get_description_1("0 * * * *".to_string()));
-    }
-
-    #[test]
-    fn test_every_xminutes() {
-        assert_eq!("Every 5 minutes", cron_expression_descriptor::get_description_1("*/5 * * * *".to_string()));
-        assert_eq!("Every 5 minutes", cron_expression_descriptor::get_description_1("0 */5 * * * *".to_string()));
-        assert_eq!("Every 10 minutes", cron_expression_descriptor::get_description_1("0 0/10 * * * ?".to_string()));
-    }
-
-    #[test]
-    fn test_daily_at_time() {
-        assert_eq!("At 11:30 AM", cron_expression_descriptor::get_description_1("30 11 * * *".to_string()));
-        assert_eq!("At 11:30", cron_expression_descriptor::get_description_2("30 11 * * *".to_string(), &Options::twenty_four_hour()));
-        assert_eq!("At 11:00 AM", cron_expression_descriptor::get_description_1("0 11 * * *".to_string()));
-    }
-
-    #[test]
-    fn test_time_of_day_certain_days_of_week() {
-        assert_eq!("At 11:00 PM, Monday through Friday", cron_expression_descriptor::get_description_1("0 23 ? * MON-FRI".to_string()));
-        assert_eq!("At 23:00, Monday through Friday", cron_expression_descriptor::get_description_2("0 23 ? * MON-FRI".to_string(), &Options::twenty_four_hour()));
-        assert_eq!("At 11:30 AM, Monday through Friday", cron_expression_descriptor::get_description_1("30 11 * * 1-5".to_string()));
-    }
-
-    #[test]
-    fn test_one_month_only() {
-        assert_eq!("Every minute, only in March", cron_expression_descriptor::get_description_1("* * * 3 *".to_string()));
-    }
-
-    #[test]
-    fn test_two_months_only() {
-        assert_eq!("Every minute, only in March and June", cron_expression_descriptor::get_description_1("* * * 3,6 *".to_string()));
-    }
-
-    #[test]
-    fn test_two_times_each_afternoon() {
-        assert_eq!("At 2:30 PM and 4:30 PM", cron_expression_descriptor::get_description_1("30 14,16 * * *".to_string()));
-        assert_eq!("At 14:30 and 16:30", cron_expression_descriptor::get_description_2("30 14,16 * * *".to_string(), &Options::twenty_four_hour()));
-    }
-
-    #[test]
-    fn test_three_times_daily() {
-        assert_eq!("At 6:30 AM, 2:30 PM and 4:30 PM", cron_expression_descriptor::get_description_1("30 6,14,16 * * *".to_string()));
-        assert_eq!("At 06:30, 14:30 and 16:30", cron_expression_descriptor::get_description_2("30 6,14,16 * * *".to_string(), &Options::twenty_four_hour()));
-    }
-
-    #[test]
-    fn test_once_aweek() {
-        assert_eq!("At 9:46 AM, only on Sunday", cron_expression_descriptor::get_description_1("46 9 * * 0".to_string()));
-        assert_eq!("At 9:46 AM, only on Sunday", cron_expression_descriptor::get_description_1("46 9 * * 7".to_string()));
-        assert_eq!("At 9:46 AM, only on Monday", cron_expression_descriptor::get_description_1("46 9 * * 1".to_string()));
-        assert_eq!("At 9:46 AM, only on Saturday", cron_expression_descriptor::get_description_1("46 9 * * 6".to_string()));
-    }
-
-    #[test]
-    fn test_once_aweek_non_zero_based() {
-        let opts = Options::options();
-        let options = Options {
-            zero_based_day_of_week: false,
-            ..opts
-        };
-        assert_eq!("At 9:46 AM, only on Sunday", cron_expression_descriptor::get_description_2("46 9 * * 1".to_string(), &options));
-        assert_eq!("At 9:46 AM, only on Monday", cron_expression_descriptor::get_description_2("46 9 * * 2".to_string(), &options));
-        assert_eq!("At 9:46 AM, only on Saturday", cron_expression_descriptor::get_description_2("46 9 * * 7".to_string(), &options));
-    }
-
-    #[test]
-    fn test_twice_aweek() {
-       assert_eq!("At 9:46 AM, only on Monday and Tuesday", cron_expression_descriptor::get_description_1("46 9 * * 1,2".to_string()));
-       assert_eq!("At 9:46 AM, only on Sunday and Saturday", cron_expression_descriptor::get_description_1("46 9 * * 0,6".to_string()));
-       assert_eq!("At 9:46 AM, only on Saturday and Sunday", cron_expression_descriptor::get_description_1("46 9 * * 6,7".to_string()));
-    }
-
-    #[test]
-    fn test_twice_aweek_non_zero_based() {
-        let options = Options {
-            zero_based_day_of_week: false,
-            ..Options::options()
-        };
-        assert_eq!("At 9:46 AM, only on Sunday and Monday", cron_expression_descriptor::get_description_2("46 9 * * 1,2".to_string(), &options));
-        assert_eq!("At 9:46 AM, only on Friday and Saturday", cron_expression_descriptor::get_description_2("46 9 * * 6,7".to_string(), &options));
-    }
-
-    #[test]
-    fn test_day_of_month() {
-        assert_eq!("At 12:23 PM, on day 15 of the month", cron_expression_descriptor::get_description_1("23 12 15 * *".to_string()));
-        assert_eq!("At 12:23, on day 15 of the month", cron_expression_descriptor::get_description_2("23 12 15 * *".to_string(), &Options::twenty_four_hour()));
-    }
-
-    #[test]
-    fn test_month_name() {
-        assert_eq!("At 12:23 PM, only in January", cron_expression_descriptor::get_description_1("23 12 * JAN *".to_string()));
-    }
-
-    #[test]
-    fn test_day_of_month_with_question_mark() {
-        assert_eq!("At 12:23 PM, only in January", cron_expression_descriptor::get_description_1("23 12 ? JAN *".to_string()));
-    }
-
-    #[test]
-    fn test_month_name_range2() {
-        assert_eq!("At 12:23 PM, January through February", cron_expression_descriptor::get_description_1("23 12 * JAN-FEB *".to_string()));
-    }
-
-    #[test]
-    fn test_month_name_range3() {
-        assert_eq!("At 12:23 PM, January through March", cron_expression_descriptor::get_description_1("23 12 * JAN-MAR *".to_string()));
-    }
-
-    #[test]
-    fn test_month_name_ranges() {
-        assert_eq!("At 3:00 AM, only in January through March and May through June", cron_expression_descriptor::get_description_1("0 0 3 * 1-3,5-6 *".to_string()));
-    }
-
-    #[test]
-    fn test_day_of_week_name() {
-        assert_eq!("At 12:23 PM, only on Sunday", cron_expression_descriptor::get_description_1("23 12 * * SUN".to_string()));
-    }
-
-    #[test]
-    fn test_day_of_week_range() {
-        assert_eq!("Every 5 minutes, at 3:00 PM, Monday through Friday", cron_expression_descriptor::get_description_1("*/5 15 * * MON-FRI".to_string()));
-        assert_eq!("Every 5 minutes, at 3:00 PM, Sunday through Saturday", cron_expression_descriptor::get_description_1("*/5 15 * * 0-6".to_string()));
-        assert_eq!("Every 5 minutes, at 3:00 PM, Saturday through Sunday", cron_expression_descriptor::get_description_1("*/5 15 * * 6-7".to_string()));
-    }
-
-    #[test]
-    fn test_day_of_week_ranges() {
-        assert_eq!("At 3:00 AM, only on Sunday, Tuesday through Thursday and Saturday", cron_expression_descriptor::get_description_1("0 0 3 * * 0,2-4,6".to_string()));
-    }
-
-    #[test]
-    fn test_day_of_week_once_in_month() {
-        assert_eq!("Every minute, on the third Monday of the month", cron_expression_descriptor::get_description_1("* * * * MON#3".to_string()));
-        assert_eq!("Every minute, on the third Sunday of the month", cron_expression_descriptor::get_description_1("* * * * 0#3".to_string()));
-    }
-
-    #[test]
-    fn test_last_day_of_the_week_of_the_month() {
-        assert_eq!("Every minute, on the last Thursday of the month", cron_expression_descriptor::get_description_1("* * * * 4L".to_string()));
-        assert_eq!("Every minute, on the last Sunday of the month", cron_expression_descriptor::get_description_1("* * * * 0L".to_string()));
-    }
-
-    #[test]
-    fn test_last_day_of_the_month() {
-        assert_eq!("Every 5 minutes, on the last day of the month, only in January", cron_expression_descriptor::get_description_1("*/5 * L JAN *".to_string()));
-    }
-
-    #[test]
-    fn test_time_of_day_with_seconds() {
-        assert_eq!("At 2:02:30 PM", cron_expression_descriptor::get_description_1("30 02 14 * * *".to_string()));
-    }
-
-    #[test]
-    fn test_second_internvals() {
-        assert_eq!("Seconds 5 through 10 past the minute", cron_expression_descriptor::get_description_1("5-10 * * * * *".to_string()));
-    }
-
-    #[test]
-    fn test_second_minutes_hours_intervals() {
-        assert_eq!("Seconds 5 through 10 past the minute, minutes 30 through 35 past the hour, between 10:00 AM and 12:00 PM",
-                   cron_expression_descriptor::get_description_1("5-10 30-35 10-12 * * *".to_string()));
-    }
-
-    #[test]
-    fn test_every5minutes_at30seconds() {
-        assert_eq!("At 30 seconds past the minute, every 5 minutes", cron_expression_descriptor::get_description_1("30 */5 * * * *".to_string()));
-    }
-
-    #[test]
-    fn test_minutes_past_the_hour_range() {
-        assert_eq!("At 30 minutes past the hour, between 10:00 AM and 1:00 PM, only on Wednesday and Friday",
-                   cron_expression_descriptor::get_description_1("0 30 10-13 ? * WED,FRI".to_string()));
-    }
-
-    #[test]
-    fn test_seconds_past_the_minute_interval() {
-        assert_eq!("At 10 seconds past the minute, every 5 minutes", cron_expression_descriptor::get_description_1("10 0/5 * * * ?".to_string()));
-    }
-
-    #[test]
-    fn test_between_with_interval() {
-        assert_eq!("Every 3 minutes, minutes 02 through 59 past the hour, at 1:00 AM, 9:00 AM and 10:00 PM, between day 11 and 26 of the month, January through June",
-                   cron_expression_descriptor::get_description_1("2-59/3 1,9,22 11-26 1-6 ?".to_string()));
-    }
-
-    #[test]
-    fn test_recurring_first_of_month() {
-        assert_eq!("At 6:00 AM", cron_expression_descriptor::get_description_1("0 0 6 1/1 * ?".to_string()));
-    }
-
-    #[test]
-    fn test_minutes_past_the_hour() {
-        assert_eq!("At 05 minutes past the hour", cron_expression_descriptor::get_description_1("0 5 0/1 * * ?".to_string()));
-    }
-
-    /**
-     * @since https://github.com/RedHogs/cron-parser/issues/2
-     */
-    #[test]
-    fn test_every_past_the_hour() {
-        assert_eq!("At 00, 05, 10, 15, 20, 25, 30, 35, 40, 45, 50 and 55 minutes past the hour", cron_expression_descriptor::get_description_1("0 0,5,10,15,20,25,30,35,40,45,50,55 * ? * *".to_string()));
-    }
-
-    /**
-     * @since https://github.com/RedHogs/cron-parser/issues/10
-     */
-    #[test]
-    fn test_every_xminute_past_the_hour_with_interval() {
-        assert_eq!("Every 2 minutes, minutes 00 through 30 past the hour, at 5:00 PM, Monday through Friday", cron_expression_descriptor::get_description_1("0 0-30/2 17 ? * MON-FRI".to_string()));
-    }
-
-    /**
-     * @since https://github.com/RedHogs/cron-parser/issues/13
-     */
-    #[test]
-    fn test_one_year_only_with_seconds() {
-        assert_eq!("Every second, only in 2013", cron_expression_descriptor::get_description_1("* * * * * * 2013".to_string()));
-    }
-
-    #[test]
-    fn test_one_year_only_without_seconds() {
-        assert_eq!("Every minute, only in 2013", cron_expression_descriptor::get_description_1("* * * * * 2013".to_string()));
-    }
-
-    #[test]
-    fn test_two_years_only() {
-        assert_eq!("Every minute, only in 2013 and 2014", cron_expression_descriptor::get_description_1("* * * * * 2013,2014".to_string()));
-    }
-
-    #[test]
-    fn test_year_range2() {
-        assert_eq!("At 12:23 PM, January through February, 2013 through 2014", cron_expression_descriptor::get_description_1("23 12 * JAN-FEB * 2013-2014".to_string()));
-    }
-
-    #[test]
-    fn test_year_range3() {
-        assert_eq!("At 12:23 PM, January through March, 2013 through 2015", cron_expression_descriptor::get_description_1("23 12 * JAN-MAR * 2013-2015".to_string()));
-    }
-
-    #[test]
-    fn test_issue26() {
-        assert_eq!("At 05 and 10 minutes past the hour", cron_expression_descriptor::get_description_1("5,10 * * * *".to_string()));
-        assert_eq!("At 05 and 10 minutes past the hour, at 12:00 AM", cron_expression_descriptor::get_description_1("5,10 0 * * *".to_string()));
-        assert_eq!("At 05 and 10 minutes past the hour, on day 2 of the month", cron_expression_descriptor::get_description_1("5,10 * 2 * *".to_string()));
-        assert_eq!("Every 10 minutes, on day 2 of the month", cron_expression_descriptor::get_description_1("5/10 * 2 * *".to_string()));
-
-        assert_eq!("At 5 and 6 seconds past the minute", cron_expression_descriptor::get_description_1("5,6 0 * * * *".to_string()));
-        assert_eq!("At 5 and 6 seconds past the minute, at 1:00 AM", cron_expression_descriptor::get_description_1("5,6 0 1 * * *".to_string()));
-        assert_eq!("At 5 and 6 seconds past the minute, on day 2 of the month", cron_expression_descriptor::get_description_1("5,6 0 * 2 * *".to_string()));
-    }
-}

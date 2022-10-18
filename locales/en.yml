@@ -66,7 +66,7 @@ en:
     only_on: only on %{0}
     only_in_month: only in %{0}
     only_in_year: only in %{0}
-    every_x_seconds: every %{0} seconds
+    every_x_seconds: every {0} seconds
     every_minute_between: Every minute between %{0} and %{1}
     every_second: every second
     every_minute: every minute
@@ -76,5 +76,5 @@ en:
     every_day: every day
     every_1_day: every 1 day
     every_year: every year
-    every_x: every %{0}
-    at_x: at %{0}
+    every_x: every {0}
+    at_x: at {0}
