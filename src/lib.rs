@@ -207,18 +207,19 @@ mod cronparser {
                         return result1;
                     } else if expression_parts.len() == 5 {
                         parsed[0] = "";
-                        (1..5).for_each(|i| parsed[i] = expression_parts[i - 1]);
+                        (1..=5).for_each(|i| parsed[i] = expression_parts[i - 1]);
+                        println!("length is 5: {}", parsed[5]);
                     } else if expression_parts.len() == 6 {
                         lazy_static! {
                             static ref YEAR_RE: Regex = Regex::new(r"\d{4}$").unwrap();
                         }
                         if YEAR_RE.is_match(expression_parts[5]) {
-                            (1..6).for_each(|i| parsed[i] = expression_parts[i - 1]);
+                            (1..=6).for_each(|i| parsed[i] = expression_parts[i - 1]);
                         } else {
-                            (0..5).for_each(|i| parsed[i] = expression_parts[i]);
+                            (0..=6).for_each(|i| parsed[i] = expression_parts[i]);
                         }
                     } else if expression_parts.len() == 7 {
-                        (0..6).for_each(|i| parsed[i] = expression_parts[i]);
+                        (0..=6).for_each(|i| parsed[i] = expression_parts[i]);
                     } else {
                         let result2 = Err(ParseException {
                             s: expression,
@@ -364,9 +365,7 @@ mod cronparser {
             description_res
         }
 
-        // TODO 2022-04-23 fill out these get*description functions and drill down to fill it all out.
-
-        // From the C# code, not Java.
+        // Frem the C# code, not Java.
         fn get_full_description(expression_parts: &Vec<String>, options: &Options) -> String {
             let time_segment = get_time_of_day_description(&expression_parts, options);
             let day_of_month_desc = get_day_of_month_description(&expression_parts, options);
@@ -383,8 +382,9 @@ mod cronparser {
                                 week_or_month_desc,
                                 month_desc,
                                 year_desc);
-            eprintln!("time: {}; day_of_month: {}; month: {}; year: {}",
+            eprintln!("time: \"{}\"; day_of_month: \"{}\"; month: \"{}\"; year: \"{}\"",
                       time_segment, week_or_month_desc, month_desc, year_desc);
+            println!("before verbosity: {}", desc1);
             let desc2 = transform_verbosity(desc1, options);
             transform_case(&desc2, options)
         }
@@ -420,7 +420,7 @@ mod cronparser {
 
         fn get_day_of_week_description(expression_parts: &Vec<String>, options: &Options) -> String {
             let builder = DayOfWeekDescriptionBuilder { options };
-            println!("in get_day_of_week_description");
+            println!("in get_day_of_week_description, expr: {}", &expression_parts[5]);
             builder.get_segment_description(&expression_parts[5],
                                             format!(", {}", t!("messages.every_day")))
         }

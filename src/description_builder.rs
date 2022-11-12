@@ -75,7 +75,7 @@ pub trait DescriptionBuilder<'a> {
                         vars.insert("1".to_string(), sid1);
                         description_content.append(format!(", {}", strfmt(&gbdf, &vars).unwrap()));
                     } else {
-                       description_content.append(self.get_single_item_description(&segments[i].to_string()));
+                        description_content.append(self.get_single_item_description(&segments[i].to_string()));
                     }
                 }
             }
@@ -83,14 +83,17 @@ pub trait DescriptionBuilder<'a> {
             vars.insert("0".to_string(), description_content.string().unwrap());
             strfmt(&self.get_description_format(expression), &vars).unwrap()
         } else if expression.contains("-") {
-            let segments= expression.split("-").collect::<Vec<_>>();
+            println!("in get_segment_description, {}:{}", file!(), line!());
+            let segments = expression.split("-").collect::<Vec<_>>();
             let gbdf = self.get_between_description_format(expression, false);
             let sid0 = self.get_single_item_description(&segments[0].to_string());
             let sid1 = self.get_single_item_description(&segments[1].to_string());
             let mut vars = HashMap::new();
             vars.insert("0".to_string(), sid0);
             vars.insert("1".to_string(), sid1);
-            format!(", {}", strfmt(&gbdf, &vars).unwrap())
+            let ret_str = format!(", {}", strfmt(&gbdf, &vars).unwrap());
+            // println!("ret string for MON-FRI: {}", tmp);
+            ret_str
         } else {
             "".to_string()
         };
@@ -199,7 +202,12 @@ impl DescriptionBuilder<'_> for DayOfMonthDescriptionBuilder<'_> {
 impl DescriptionBuilder<'_> for DayOfWeekDescriptionBuilder<'_> {
     fn get_between_description_format(&self, expression: &String, omit_separator: bool) -> String {
         // MessageFormat.format(", "+I18nMessages.get("interval_description_format"), expression);
-        format!("{} {}", ",", t!("messages.interval_description_format", 0 = expression))
+        let format = t!("messages.between_weekday_description_format");
+        if omit_separator {
+            format
+        } else {
+            format!(", {}", format)
+        }
     }
 
     fn get_interval_description_format(&self, expression: &String) -> String {
@@ -320,9 +328,10 @@ impl DescriptionBuilder<'_> for MinutesDescriptionBuilder<'_> {
 
     fn get_description_format(&self, expression: &String) -> String {
         if expression == "0" {
-            t!("messages.at_x") + &self.get_space() + &Self::min_plural(expression)
+            "".to_string()
         } else {
-            self.get_space() + &t!("messages.past_the_hour")
+            t!("messages.at_x") + &self.get_space() + &Self::min_plural(expression) +
+                &self.get_space() + &t!("messages.past_the_hour")
         }
     }
 
