@@ -257,13 +257,13 @@ impl DescriptionBuilder<'_> for DayOfWeekDescriptionBuilder<'_> {
                 "5" => t!("fifth"),
                 _ => "".to_string()
             };
-            let i18_str = t!("on_the_day_of_the_month");
+            let i18_str = t!("messages.on_the_day_of_the_month");
             let msg = strfmt!(&i18_str, nth => day_of_week_month_description);
             String::from(", ") + msg.unwrap().as_str()
         } else if expression.contains("L") {
-            format!("{} {}", ",", t!("on_the_last_of_the_month"))
+            format!("{} {}", ",", t!("messages.on_the_last_of_the_month"))
         } else {
-            format!("{} {}", ",", t!("only_on"))
+            format!("{} {}", ",", t!("messages.only_on"))
         };
         format
     }

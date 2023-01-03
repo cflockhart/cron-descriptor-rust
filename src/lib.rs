@@ -214,9 +214,9 @@ mod cronparser {
                             static ref YEAR_RE: Regex = Regex::new(r"\d{4}$").unwrap();
                         }
                         if YEAR_RE.is_match(expression_parts[5]) {
-                            (1..=6).for_each(|i| parsed[i] = expression_parts[i - 1]);
+                            (1..6).for_each(|i| parsed[i] = expression_parts[i - 1]);
                         } else {
-                            (0..=6).for_each(|i| parsed[i] = expression_parts[i]);
+                            (0..6).for_each(|i| parsed[i] = expression_parts[i]);
                         }
                     } else if expression_parts.len() == 7 {
                         (0..=6).for_each(|i| parsed[i] = expression_parts[i]);
