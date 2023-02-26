@@ -239,37 +239,42 @@ mod cronparser {
                     "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
                 let mut normalised: Vec<String> = vec!["".to_string(); 7];
 
-                normalised[3] = expression_parts[3].replace("?", "*");
-                normalised[5] = expression_parts[5].clone().replace("?", "*");
-                normalised[0] = if expression_parts[0].starts_with("0/") { // seconds
-                    expression_parts[0].replace("0/", "*/")
+                (0..expression_parts.len()).for_each(|i| {
+                    normalised[i] = expression_parts[i].to_string();
+                });
+
+                normalised[3] = normalised[3].replace("?", "*");
+                normalised[5] = normalised[5].replace("?", "*");
+                println!("normalised after replacing \"?\": {:?}", normalised);
+                normalised[0] = if normalised[0].starts_with("0/") { // seconds
+                    normalised[0].replace("0/", "*/")
                 } else {
-                    expression_parts[0].to_string()
+                    normalised[0].to_string()
                 };
-                normalised[1] = if expression_parts[1].starts_with("0/") { // minutes
-                    expression_parts[1].replace("0/", "*/")
+                normalised[1] = if normalised[1].starts_with("0/") { // minutes
+                    normalised[1].replace("0/", "*/")
                 } else {
-                    expression_parts[1].to_string()
+                    normalised[1].to_string()
                 };
-                normalised[2] = if expression_parts[2].starts_with("0/") { // hours
-                    expression_parts[2].replace("0/", "*/")
+                normalised[2] = if normalised[2].starts_with("0/") { // hours
+                    normalised[2].replace("0/", "*/")
                 } else {
-                    expression_parts[2].to_string()
+                    normalised[2].to_string()
                 };
-                normalised[3] = if expression_parts[3].starts_with("1/") { // hours
-                    expression_parts[3].replace("1/", "*/")
+                normalised[3] = if normalised[3].starts_with("1/") { // hours
+                    normalised[3].replace("1/", "*/")
                 } else {
-                    expression_parts[3].to_string()
+                    normalised[3].to_string()
                 };
-                normalised[4] = if expression_parts[4].starts_with("1/") { // hours
-                    expression_parts[4].replace("1/", "*/")
+                normalised[4] = if normalised[4].starts_with("1/") { // hours
+                    normalised[4].replace("1/", "*/")
                 } else {
-                    expression_parts[4].to_string()
+                    normalised[4].to_string()
                 };
-                normalised[5] = if expression_parts[5].starts_with("1/") { // hours
-                    expression_parts[5].replace("1/", "*/")
+                normalised[5] = if normalised[5].starts_with("1/") { // hours
+                    normalised[5].replace("1/", "*/")
                 } else {
-                    expression_parts[5].to_string()
+                    normalised[5].to_string()
                 };
 
                 fn is_numeric(s: &str) -> bool {
@@ -281,12 +286,14 @@ mod cronparser {
                     return true;
                 }
 
-                for i in 0..expression_parts.len() {
-                    if expression_parts[i] == "*/1" {
+                for i in 0..normalised.len() {
+                    if normalised[i] == "*/1" {
                         normalised[i] = "*".to_string();
                     }
                 }
+                println!("normalised after replacing */1: {:?}", normalised);
                 /*
+                        // From the Java code:
 
                         // convert SUN-SAT format to 0-6 format
                         if(!StringUtils.isNumeric(expressionParts[5])) {
@@ -314,30 +321,31 @@ mod cronparser {
                             expressionParts[5] = "7";
                         }
                  */
-                if !is_numeric(expression_parts[5]) {
+                if !is_numeric(&normalised[5]) {
                     for i in 0..=6 {
-                        normalised[5] = expression_parts[5].replace(DAYS_OF_WEEK_ARR[i], i.to_string().as_str());
+                        normalised[5] = normalised[5].replace(DAYS_OF_WEEK_ARR[i], i.to_string().as_str());
                     }
                 }
 
-                if !is_numeric(expression_parts[4]) {
+                if !is_numeric(&normalised[4]) {
                     for i in 0..=11 {
-                        normalised[4] = expression_parts[4].replace(MONTHS_ARR[i], i.to_string().as_str());
+                        normalised[4] = normalised[4].replace(MONTHS_ARR[i], i.to_string().as_str());
                     }
                 }
 
                 // convert 0 second to (empty)
-                if "0" == expression_parts[0] {
+                if "0" == normalised[0] {
                     normalised[0] = "".to_string();
                 }
 
                 // convert 0 DOW to 7 so that 0 for Sunday in zeroBasedDayOfWeek is valid
                 // this logic is copied from the Java version and seems different than the C#
                 // version.
-                if options.zero_based_day_of_week && "0" == expression_parts[5] {
+                if options.zero_based_day_of_week && "0" == normalised[5] {
                     normalised[5] = "7".to_string();
                 }
 
+                println!("normalised: {:?}", normalised);
                 // Bunch of logic in the C# version is missing from the Java version,
                 // such as regex handling of the DOW, stepping and between ranges.
                 normalised
@@ -373,8 +381,10 @@ mod cronparser {
             let day_of_week_desc = get_day_of_week_description(&expression_parts, options);
             let year_desc = get_year_description(&expression_parts, options);
             let week_or_month_desc = if "*" == &expression_parts[3] {
+                println!("Using day_of_week_desc");
                 day_of_week_desc
             } else {
+                println!("Using day_of_month_desc");
                 day_of_month_desc
             };
             let desc1 = format!("{0}{1}{2}{3}",
@@ -475,7 +485,7 @@ mod cronparser {
                     strfmt(&fmt_str, &vars).unwrap()
                 } else {
                     let builder = DayOfMonthDescriptionBuilder { options };
-                    eprintln!("in get_day_of_month_description");
+                    eprintln!("in get_day_of_month_description, exp: {}", exp);
                     builder.get_segment_description(&exp,
                                                     format!(", {}", t!("messages.every_day")))
                 }
