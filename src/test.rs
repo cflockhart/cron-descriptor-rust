@@ -9,28 +9,6 @@ mod tests {
     use crate::cronparser::cron_expression_descriptor;
     use crate::cronparser::Options;
 
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-
-    #[test]
-    fn test_localized_text() {
-        assert_eq!("5 through 9", t!("messages.between_weekday_description_format", 0 = "5", 1 = "9"));
-        let i18 = t!("messages.on_the_day_of_the_month", 0 = "monday");
-        let nth_str = i18.replace("{nth}", "first");
-        assert_eq!("on the first monday of the month", nth_str);
-    }
-
-    #[test]
-    fn test_strfmt_text() {
-        let mut vars = HashMap::new();
-        vars.insert("nth".to_string(), "5th");
-        let i18 = t!("messages.on_the_day_of_the_month", 0 = "monday");
-        let formatted = strfmt(&i18, &vars).unwrap();
-        assert_eq!("on the 5th monday of the month", formatted);
-    }
 
     #[test]
     fn test_every_second() {

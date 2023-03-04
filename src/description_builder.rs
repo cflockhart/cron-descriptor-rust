@@ -65,25 +65,25 @@ pub trait DescriptionBuilder<'a> {
                     if self.need_space_between_words() {
                         description_content.append(" ");
                     }
-                    if segments[i].contains("-") {
-                        let between_segments = segments[i].split("-").collect::<Vec<_>>();
-                        let gbdf = self.get_between_description_format(expression, true);
-                        let sid0 = self.get_single_item_description(&between_segments[0].to_string());
-                        let sid1 = self.get_single_item_description(&between_segments[1].to_string());
-                        let mut vars = HashMap::new();
-                        vars.insert("0".to_string(), sid0);
-                        vars.insert("1".to_string(), sid1);
-                        description_content.append(format!(", {}", strfmt(&gbdf, &vars).unwrap()));
-                    } else {
-                        description_content.append(self.get_single_item_description(&segments[i].to_string()));
-                    }
+                }
+                if segments[i].contains("-") {
+                    let between_segments = segments[i].split("-").collect::<Vec<_>>();
+                    let gbdf = self.get_between_description_format(expression, true);
+                    let sid0 = self.get_single_item_description(&between_segments[0].to_string());
+                    let sid1 = self.get_single_item_description(&between_segments[1].to_string());
+                    let mut vars = HashMap::new();
+                    vars.insert("0".to_string(), sid0);
+                    vars.insert("1".to_string(), sid1);
+                    description_content.append(strfmt(&gbdf, &vars).unwrap());
+                } else {
+                    description_content.append(self.get_single_item_description(&segments[i].to_string()));
                 }
             }
             let mut vars = HashMap::new();
             vars.insert("0".to_string(), description_content.string().unwrap());
             strfmt(&self.get_description_format(expression), &vars).unwrap()
         } else if expression.contains("-") {
-            println!("in get_segment_description, {}:{}", file!(), line!());
+            println!("in get_segment_description, expression:{}, {}:{}", expression, file!(), line!());
             let segments = expression.split("-").collect::<Vec<_>>();
             let gbdf = self.get_between_description_format(expression, false);
             let sid0 = self.get_single_item_description(&segments[0].to_string());
@@ -91,8 +91,7 @@ pub trait DescriptionBuilder<'a> {
             let mut vars = HashMap::new();
             vars.insert("0".to_string(), sid0);
             vars.insert("1".to_string(), sid1);
-            let ret_str = format!(", {}", strfmt(&gbdf, &vars).unwrap());
-            // println!("ret string for MON-FRI: {}", tmp);
+            let ret_str = strfmt(&gbdf, &vars).unwrap();
             ret_str
         } else {
             "".to_string()
@@ -171,23 +170,22 @@ pub struct YearDescriptionBuilder<'a> {
 
 impl DescriptionBuilder<'_> for DayOfMonthDescriptionBuilder<'_> {
     fn get_between_description_format(&self, expression: &String, omit_separator: bool) -> String {
-        let format = t!("between_days_of_the_month");
+        let format = t!("messages.between_days_of_the_month");
         if omit_separator {
             format
         } else {
-            String::from(", ") + &format
+            format!(", {}", format)
         }
     }
 
     fn get_interval_description_format(self: &Self, expression: &String) -> String {
-        // return ", "+I18nMessages.get("every_x")+ getSpace(options) + plural(expression, I18nMessages.get("day"), I18nMessages.get("days"));
         ", ".to_string() + &t!("every_x") + &self.get_space() + &Self::plural(expression, &t!("day"), &t!("days"))
     }
 
-    fn get_single_item_description(&self, expression: &String) -> String { "".to_string() }
+    fn get_single_item_description(&self, expression: &String) -> String { expression.to_string() }
 
     fn get_description_format(&self, expression: &String) -> String {
-        ", ".to_string() + &t!("on_day_of_month")
+        ", ".to_string() + &t!("messages.on_day_of_month")
     }
 
     fn need_space_between_words(&self) -> bool {
@@ -258,7 +256,8 @@ impl DescriptionBuilder<'_> for DayOfWeekDescriptionBuilder<'_> {
                 _ => "".to_string()
             };
             let i18_str = t!("messages.on_the_day_of_the_month");
-            let msg = strfmt!(&i18_str, nth => day_of_week_month_description);
+            let msg = strfmt!(&i18_str, nth => day_of_week_month_description,
+                           day_of_week => "{0}");
             String::from(", ") + msg.unwrap().as_str()
         } else if expression.contains("L") {
             format!("{} {}", ",", t!("messages.on_the_last_of_the_month"))
@@ -375,7 +374,7 @@ impl DescriptionBuilder<'_> for MonthDescriptionBuilder<'_> {
         // return new DateTime().withDayOfMonth(1).withMonthOfYear(Integer.parseInt(expression)).
         //     toString("MMMM", I18nMessages.getCurrentLocale());
         let month_num = expression.parse::<usize>().unwrap();
-        let month_key = MONTHS_ARR[month_num];
+        let month_key = MONTHS_ARR[month_num - 1];
         t!(month_key)
     }
 

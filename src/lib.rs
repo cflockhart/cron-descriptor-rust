@@ -69,8 +69,12 @@ mod date_time_utils {
             seconds = ":".to_string() + &seconds_expression.parse::<i8>().unwrap().to_string();
             seconds = format!("{:0>2}", seconds);
         }
-
-        format!("{0}:{1}{2}{3}", format!("{}", hour), format!("{:0>2}", minutes), seconds, period)
+        let formatted_hours = if opts.twenty_four_hour_time {
+            format!("{:0>2}", hour)
+        } else {
+            format!("{}", hour)
+        };
+        format!("{0}:{1}{2}{3}", formatted_hours, format!("{:0>2}", minutes), seconds, period)
     }
 
 
@@ -86,12 +90,12 @@ pub fn format_minutes(minutes_expression: &str) -> String {
         let mparts = minutes_expression.split(",");
         let mut formatted_expression = Builder::default();
         for mpt in mparts {
-            formatted_expression.append(format!("{:02}", mpt));
+            formatted_expression.append(format!("{:02}", mpt.parse::<i8>().unwrap()));
             formatted_expression.append(",");
         }
         formatted_expression.string().unwrap()
     } else {
-        format!("{:02}", minutes_expression.to_string())
+        format!("{:02}", minutes_expression.parse::<i8>().unwrap())
     }
 }
 
@@ -151,7 +155,7 @@ mod cronparser {
         use lazy_static::lazy_static;
         use string_builder::Builder;
 
-        use crate::cronparser;
+        use crate::{cronparser, string_utils};
         use crate::cronparser::{CasingTypeEnum, DescriptionTypeEnum, Options};
         use crate::date_time_utils::{format_time, format_time_secs};
         use crate::description_builder::{DayOfMonthDescriptionBuilder, DayOfWeekDescriptionBuilder, HoursDescriptionBuilder, MinutesDescriptionBuilder, MonthDescriptionBuilder, SecondsDescriptionBuilder, YearDescriptionBuilder};
@@ -214,7 +218,8 @@ mod cronparser {
                             static ref YEAR_RE: Regex = Regex::new(r"\d{4}$").unwrap();
                         }
                         if YEAR_RE.is_match(expression_parts[5]) {
-                            (1..6).for_each(|i| parsed[i] = expression_parts[i - 1]);
+                            println!("Matched year: {}", expression_parts[5]);
+                            (1..=6).for_each(|i| parsed[i] = expression_parts[i - 1]);
                         } else {
                             (0..6).for_each(|i| parsed[i] = expression_parts[i]);
                         }
@@ -328,8 +333,8 @@ mod cronparser {
                 }
 
                 if !is_numeric(&normalised[4]) {
-                    for i in 0..=11 {
-                        normalised[4] = normalised[4].replace(MONTHS_ARR[i], i.to_string().as_str());
+                    for i in 1..12 {
+                        normalised[4] = normalised[4].replace(MONTHS_ARR[i-1], i.to_string().as_str());
                     }
                 }
 
@@ -511,9 +516,9 @@ mod cronparser {
                                                     minutes_expression,
                                                     seconds_expression,
                                                     options));
-            } else if seconds_expression == "" && minutes_expression.contains("-")
-                && !minutes_expression.contains(",")
-                && hours_expression.chars().all(|c| !SPECIAL_CHARACTERS.contains(&c)) {
+            } else if minutes_expression.contains("-") 
+                    && !minutes_expression.contains("/") 
+                    && string_utils::not_contains_any(hours_expression, &SPECIAL_CHARACTERS) {
                 let mut minute_parts = minutes_expression.split("-");
                 let msg0 = format_time(hours_expression,
                                        &minute_parts.next().unwrap().to_string(),
@@ -522,9 +527,8 @@ mod cronparser {
                                        &minute_parts.next().unwrap().to_string(),
                                        options);
                 description.append(t!("messages.every_minute_between",0 = &msg0, 1 = &msg1));
-            } else if seconds_expression == "" && hours_expression.contains(",")
-                && !hours_expression.contains("-")
-                && !minutes_expression.chars().all(|c| !SPECIAL_CHARACTERS.contains(&c)) {
+            } else if hours_expression.contains(",") 
+                && string_utils::not_contains_any(minutes_expression, &SPECIAL_CHARACTERS) {
                 let hour_parts: Vec<_> = hours_expression.split(",").collect();
                 let hpsz = hour_parts.len();
                 description.append(t!("at"));
