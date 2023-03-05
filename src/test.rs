@@ -97,10 +97,9 @@ mod tests {
 
     #[test]
     fn test_once_aweek_non_zero_based() {
-        let opts = Options::options();
         let options = Options {
             zero_based_day_of_week: false,
-            ..opts
+            ..Options::options()
         };
         assert_eq!("At 9:46 AM, only on Sunday", cron_expression_descriptor::get_description_cron_options("46 9 * * 1".to_string(), &options));
         assert_eq!("At 9:46 AM, only on Monday", cron_expression_descriptor::get_description_cron_options("46 9 * * 2".to_string(), &options));
