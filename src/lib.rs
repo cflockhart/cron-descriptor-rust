@@ -212,13 +212,12 @@ mod cronparser {
                     } else if expression_parts.len() == 5 {
                         parsed[0] = "";
                         (1..=5).for_each(|i| parsed[i] = expression_parts[i - 1]);
-                        println!("length is 5: {}", parsed[5]);
+                        // println!("length is 5: {}", parsed[5]);
                     } else if expression_parts.len() == 6 {
                         lazy_static! {
                             static ref YEAR_RE: Regex = Regex::new(r"\d{4}$").unwrap();
                         }
                         if YEAR_RE.is_match(expression_parts[5]) {
-                            println!("Matched year: {}", expression_parts[5]);
                             (1..=6).for_each(|i| parsed[i] = expression_parts[i - 1]);
                         } else {
                             (0..6).for_each(|i| parsed[i] = expression_parts[i]);
@@ -250,37 +249,22 @@ mod cronparser {
 
                 normalised[3] = normalised[3].replace("?", "*");
                 normalised[5] = normalised[5].replace("?", "*");
-                println!("normalised after replacing \"?\": {:?}", normalised);
-                normalised[0] = if normalised[0].starts_with("0/") { // seconds
-                    normalised[0].replace("0/", "*/")
-                } else {
-                    normalised[0].to_string()
-                };
-                normalised[1] = if normalised[1].starts_with("0/") { // minutes
-                    normalised[1].replace("0/", "*/")
-                } else {
-                    normalised[1].to_string()
-                };
-                normalised[2] = if normalised[2].starts_with("0/") { // hours
-                    normalised[2].replace("0/", "*/")
-                } else {
-                    normalised[2].to_string()
-                };
-                normalised[3] = if normalised[3].starts_with("1/") { // hours
-                    normalised[3].replace("1/", "*/")
-                } else {
-                    normalised[3].to_string()
-                };
-                normalised[4] = if normalised[4].starts_with("1/") { // hours
-                    normalised[4].replace("1/", "*/")
-                } else {
-                    normalised[4].to_string()
-                };
-                normalised[5] = if normalised[5].starts_with("1/") { // hours
-                    normalised[5].replace("1/", "*/")
-                } else {
-                    normalised[5].to_string()
-                };
+                
+                (0..=2).for_each(|i| normalised[i] = 
+                    if normalised[i].starts_with("0/") { 
+                        normalised[i].replace("0/", "*/")
+                    } else {
+                        normalised[i].to_string()
+                    }
+                );
+
+                (3..=5).for_each(|i| normalised[i] = 
+                    if normalised[i].starts_with("1/") { 
+                        normalised[i].replace("1/", "*/")
+                    } else {
+                        normalised[i].to_string()
+                    }
+                );
 
                 fn is_numeric(s: &str) -> bool {
                     for c in s.chars() {
@@ -296,42 +280,15 @@ mod cronparser {
                         normalised[i] = "*".to_string();
                     }
                 }
-                println!("normalised after replacing */1: {:?}", normalised);
-                /*
-                        // From the Java code:
-
-                        // convert SUN-SAT format to 0-6 format
-                        if(!StringUtils.isNumeric(expressionParts[5])) {
-                            for (int i = 0; i <= 6; i++) {
-                                expressionParts[5] = expressionParts[5].clone().replace(DateAndTimeUtils.getDayOfWeekName(i + 1), String.valueOf(i));
-                            }
-                        }
-
-                        // convert JAN-DEC format to 1-12 format
-                        if(!StringUtils.isNumeric(expressionParts[4])) {
-                            for (int i = 1; i <= 12; i++) {
-                                DateTime currentMonth = new DateTime().withDayOfMonth(1).withMonthOfYear(i);
-                                String currentMonthDescription = currentMonth.toString("MMM", Locale.ENGLISH).toUpperCase();
-                                expressionParts[4] = expressionParts[4].clone().replace(currentMonthDescription, String.valueOf(i));
-                            }
-                        }
-
-                        // convert 0 second to (empty)
-                        if ("0".equals(expressionParts[0])) {
-                            expressionParts[0] = StringUtils.EMPTY;
-                        }
-
-                        // convert 0 DOW to 7 so that 0 for Sunday in zeroBasedDayOfWeek is valid
-                        if((options == null || options.isZeroBasedDayOfWeek()) && "0".equals(expressionParts[5])) {
-                            expressionParts[5] = "7";
-                        }
-                 */
+                // println!("normalised after replacing */1: {:?}", normalised);
+                // convert SUN-SAT format to 0-6 format
                 if !is_numeric(&normalised[5]) {
                     for i in 0..=6 {
                         normalised[5] = normalised[5].replace(DAYS_OF_WEEK_ARR[i], i.to_string().as_str());
                     }
                 }
 
+                // convert JAN-DEC format to 1-12 format
                 if !is_numeric(&normalised[4]) {
                     for i in 1..12 {
                         normalised[4] = normalised[4].replace(MONTHS_ARR[i-1], i.to_string().as_str());
@@ -350,7 +307,7 @@ mod cronparser {
                     normalised[5] = "7".to_string();
                 }
 
-                println!("normalised: {:?}", normalised);
+                // println!("normalised: {:?}", normalised);
                 // Bunch of logic in the C# version is missing from the Java version,
                 // such as regex handling of the DOW, stepping and between ranges.
                 normalised
@@ -386,10 +343,8 @@ mod cronparser {
             let day_of_week_desc = get_day_of_week_description(&expression_parts, options);
             let year_desc = get_year_description(&expression_parts, options);
             let week_or_month_desc = if "*" == &expression_parts[3] {
-                println!("Using day_of_week_desc");
                 day_of_week_desc
             } else {
-                println!("Using day_of_month_desc");
                 day_of_month_desc
             };
             let desc1 = format!("{0}{1}{2}{3}",
@@ -397,9 +352,9 @@ mod cronparser {
                                 week_or_month_desc,
                                 month_desc,
                                 year_desc);
-            eprintln!("time: \"{}\"; day_of_month: \"{}\"; month: \"{}\"; year: \"{}\"",
-                      time_segment, week_or_month_desc, month_desc, year_desc);
-            println!("before verbosity: {}", desc1);
+            // eprintln!("time: \"{}\"; day_of_month: \"{}\"; month: \"{}\"; year: \"{}\"",
+            //           time_segment, week_or_month_desc, month_desc, year_desc);
+            // println!("before verbosity: {}", desc1);
             let desc2 = transform_verbosity(desc1, options);
             transform_case(&desc2, options)
         }
@@ -435,7 +390,7 @@ mod cronparser {
 
         fn get_day_of_week_description(expression_parts: &Vec<String>, options: &Options) -> String {
             let builder = DayOfWeekDescriptionBuilder { options };
-            println!("in get_day_of_week_description, expr: {}", &expression_parts[5]);
+            // println!("in get_day_of_week_description, expr: {}", &expression_parts[5]);
             builder.get_segment_description(&expression_parts[5],
                                             format!(", {}", t!("messages.every_day")))
         }
@@ -490,7 +445,7 @@ mod cronparser {
                     strfmt(&fmt_str, &vars).unwrap()
                 } else {
                     let builder = DayOfMonthDescriptionBuilder { options };
-                    eprintln!("in get_day_of_month_description, exp: {}", exp);
+                    // eprintln!("in get_day_of_month_description, exp: {}", exp);
                     builder.get_segment_description(&exp,
                                                     format!(", {}", t!("messages.every_day")))
                 }
@@ -549,9 +504,9 @@ mod cronparser {
                 let seconds_description = get_seconds_description(expression_parts, options);
                 let minutes_description = get_minutes_description(expression_parts, options);
                 let hours_description = get_hours_description(expression_parts, options);
-                println!("file: {}, line: {}", file!(), line!());
-                println!("seconds_description: {} minutes_description: {}, hours_description: {}",
-                  seconds_description, minutes_description, hours_description);
+                // println!("file: {}, line: {}", file!(), line!());
+                // println!("seconds_description: {} minutes_description: {}, hours_description: {}",
+                //   seconds_description, minutes_description, hours_description);
                 description.append(seconds_description);
                 if description.len() > 0 && ! minutes_description.is_empty() {
                     description.append(", ");
@@ -567,7 +522,7 @@ mod cronparser {
         }
 
         pub fn get_description_cron(expression: String) -> String {
-            println!("Expression: {}", expression);
+            // println!("Expression: {}", expression);
             get_description(DescriptionTypeEnum::FULL, expression,
                             &Options::options(), rust_i18n::locale())
         }

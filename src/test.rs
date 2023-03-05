@@ -2,10 +2,6 @@
 mod tests {
     extern crate strfmt;
 
-    use std::collections::HashMap;
-
-    use strfmt::strfmt;
-
     use crate::cronparser::cron_expression_descriptor;
     use crate::cronparser::Options;
 

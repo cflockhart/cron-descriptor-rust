@@ -30,7 +30,6 @@ pub trait DescriptionBuilder<'a> {
             let segments = expression.split("/").collect::<Vec<_>>();
             let gidf = self.get_interval_description_format(&segments[1].to_string());
             let gsid = self.get_single_item_description(&segments[1].to_string());
-            let gsid2 = gsid.clone();
             let mut vars = HashMap::new();
             vars.insert("0".to_string(), gsid);
             let tmpstr = strfmt(&gidf, &vars).unwrap();
@@ -45,7 +44,7 @@ pub trait DescriptionBuilder<'a> {
                 vars.insert("1".to_string(), sid1);
                 format!("{}, {}", tmpstr, strfmt(&gbdf, &vars).unwrap())
             } else {
-                println!("gidf: {}, gsid: {}", gidf, gsid2);
+                // println!("gidf: {}, gsid: {}", gidf, gsid2);
                 tmpstr
             }
         } else if expression.contains(",") {
@@ -83,7 +82,7 @@ pub trait DescriptionBuilder<'a> {
             vars.insert("0".to_string(), description_content.string().unwrap());
             strfmt(&self.get_description_format(expression), &vars).unwrap()
         } else if expression.contains("-") {
-            println!("in get_segment_description, expression:{}, {}:{}", expression, file!(), line!());
+            // println!("in get_segment_description, expression:{}, {}:{}", expression, file!(), line!());
             let segments = expression.split("-").collect::<Vec<_>>();
             let gbdf = self.get_between_description_format(false);
             let sid0 = self.get_single_item_description(&segments[0].to_string());
