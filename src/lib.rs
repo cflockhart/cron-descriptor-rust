@@ -5,9 +5,8 @@ extern crate strfmt;
 use string_builder::Builder;
 
 mod description_builder;
-mod test;
 
-i18n!("locales");
+rust_i18n::i18n!("locales");
 
 mod string_utils {
     pub fn not_contains_any(str: &String, chars: &[char]) -> bool {
@@ -29,9 +28,6 @@ mod date_time_utils {
     pub static MONTHS_ARR: [&str; 12] = ["january", "february", "march", "april", "may", "june",
         "july", "august", "september", "october", "november", "december"];
 
-
-    // use datetime::{ISO, LocalTime};
-    // use datetime::fmt;
     use crate::cronparser::Options;
 
     pub fn format_time(hours_expression: &String, minutes_expression: &String, opts: &Options) -> String {
@@ -99,7 +95,7 @@ pub fn format_minutes(minutes_expression: &str) -> String {
     }
 }
 
-mod cronparser {
+pub mod cronparser {
     pub enum CasingTypeEnum {
         Title,
         Sentence,
@@ -565,5 +561,9 @@ mod cronparser {
                             options, rust_i18n::locale())
         }
     }
+}
+
+#[cfg(test)]
+mod test {
 }
 
