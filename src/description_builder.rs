@@ -233,12 +233,12 @@ impl DescriptionBuilder<'_> for DayOfWeekDescriptionBuilder<'_> {
             } else if !self.options.zero_based_day_of_week {
                 day_of_week_num -= 1;
             }
-            return date_time_utils::get_day_of_week_name(day_of_week_num as usize);
+            date_time_utils::get_day_of_week_name(day_of_week_num as usize)
         } else {
             // Get localized day of week name
             let lowered = exp.to_lowercase();
             let capitalized = lowered[0..1].to_uppercase() + &lowered[1..];
-            return t!(&capitalized);
+            t!(&capitalized)
         }
     }
 
