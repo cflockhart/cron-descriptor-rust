@@ -323,7 +323,7 @@ pub mod cronparser {
             description_res
         }
 
-        // Frem the C# code, not Java.
+        // From the C# code, not Java.
         fn get_full_description(expression_parts: &Vec<String>, options: &Options) -> String {
             let time_segment = get_time_of_day_description(&expression_parts, options);
             let day_of_month_desc = get_day_of_month_description(&expression_parts, options);
