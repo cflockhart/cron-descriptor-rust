@@ -184,6 +184,7 @@ pub mod cronparser {
 
             use crate::cronparser::cron_expression_descriptor::ParseException;
             use crate::cronparser::Options;
+            use crate::string_utils;
             use regex::Regex;
 
             pub fn parse(expression: String, options: &Options) -> Result<Vec<String>, ParseException> {
@@ -262,15 +263,6 @@ pub mod cronparser {
                     }
                 );
 
-                fn is_numeric(s: &str) -> bool {
-                    for c in s.chars() {
-                        if !c.is_numeric() {
-                            return false;
-                        }
-                    }
-                    return true;
-                }
-
                 for i in 0..normalised.len() {
                     if normalised[i] == "*/1" {
                         normalised[i] = "*".to_string();
@@ -278,14 +270,14 @@ pub mod cronparser {
                 }
                 // println!("normalised after replacing */1: {:?}", normalised);
                 // convert SUN-SAT format to 0-6 format
-                if !is_numeric(&normalised[5]) {
+                if !string_utils::is_numeric(&normalised[5]) {
                     for i in 0..=6 {
                         normalised[5] = normalised[5].replace(DAYS_OF_WEEK_ARR[i], i.to_string().as_str());
                     }
                 }
 
                 // convert JAN-DEC format to 1-12 format
-                if !is_numeric(&normalised[4]) {
+                if !string_utils::is_numeric(&normalised[4]) {
                     for i in 1..12 {
                         normalised[4] = normalised[4].replace(MONTHS_ARR[i-1], i.to_string().as_str());
                     }

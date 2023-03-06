@@ -1,9 +1,6 @@
 use rust_cron_parser;
 extern crate strfmt;
 
-// i18n!("locales");
-// #[cfg(test)]
-
 use rust_cron_parser::cronparser::cron_expression_descriptor;
 use rust_cron_parser::cronparser::Options;
 

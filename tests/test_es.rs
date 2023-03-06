@@ -569,10 +569,3 @@ fn test_issue26() {
         cron_expression_descriptor::get_description_cron("5,6 0 * 2 * *".to_string())
     );
 }
-
-// #[macro_use]
-// extern crate rust_i18n;
-
-// use rust_i18n::set_locale;
-// i18n!("locales");
-// rust_i18n::set_locale("es");
