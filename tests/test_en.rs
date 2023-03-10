@@ -1,8 +1,8 @@
-use rust_cron_parser;
+use cron_descriptor;
 extern crate strfmt;
 
-use rust_cron_parser::cronparser::cron_expression_descriptor;
-use rust_cron_parser::cronparser::Options;
+use cron_descriptor::cronparser::cron_expression_descriptor;
+use cron_descriptor::cronparser::Options;
 
 #[test]
 fn test_every_second() {
