@@ -187,25 +187,23 @@ pub mod cronparser {
             use crate::string_utils;
             use regex::Regex;
 
-            pub fn parse(expression: String, options: &Options) -> Result<Vec<String>, ParseException> {
+            pub fn parse(expression: &str, options: &Options) -> Result<Vec<String>, ParseException> {
                 let mut parsed: Vec<&str> = vec![""; 7];
                 if expression.trim().is_empty() {
                     lazy_static! {
                         static ref ERR_STR: String = t!("expression_empty_exception");
                     }
-                    let result = Err(ParseException {
-                        s: expression,
+                    Err(ParseException {
+                        s: expression.to_string(),
                         error_offset: 0,
-                    });
-                    result
+                    })
                 } else {
                     let expression_parts: Vec<&str> = expression.trim().split_whitespace().collect();
                     if expression_parts.len() < 5 {
-                        let result1 = Err(ParseException {
-                            s: expression,
+                        return Err(ParseException {
+                            s: expression.to_string(),
                             error_offset: 0,
                         });
-                        return result1;
                     } else if expression_parts.len() == 5 {
                         parsed[0] = "";
                         (1..=5).for_each(|i| parsed[i] = expression_parts[i - 1]);
@@ -223,7 +221,7 @@ pub mod cronparser {
                         (0..=6).for_each(|i| parsed[i] = expression_parts[i]);
                     } else {
                         let result2 = Err(ParseException {
-                            s: expression,
+                            s: expression.to_string(),
                             error_offset: 7,
                         });
                         return result2;
@@ -303,9 +301,9 @@ pub mod cronparser {
         }
 
         pub fn get_description(description_type: DescriptionTypeEnum,
-                               expression: String,
+                               expression: &str,
                                options: &Options,
-                               locale: String) -> String {
+                               locale: &str) -> String {
             rust_i18n::set_locale(&locale);
             let expression_parts = expression_parser::parse(expression, options).unwrap();
 
@@ -509,48 +507,48 @@ pub mod cronparser {
             description.string().unwrap()
         }
 
-        pub fn get_description_cron(expression: String) -> String {
+        pub fn get_description_cron(expression: &str) -> String {
             // println!("Expression: {}", expression);
             get_description(DescriptionTypeEnum::FULL, expression,
-                            &Options::options(), rust_i18n::locale())
+                            &Options::options(), &rust_i18n::locale())
         }
 
-        pub fn get_description_cron_options(expression: String, options: &cronparser::Options) -> String {
+        pub fn get_description_cron_options(expression: &str, options: &cronparser::Options) -> String {
             get_description(DescriptionTypeEnum::FULL, expression,
-                            options, rust_i18n::locale())
+                            options, &rust_i18n::locale())
         }
 
-        pub fn get_description_cron_locale(expression: String, locale: String) -> String {
+        pub fn get_description_cron_locale(expression: &str, locale: &str) -> String {
             get_description(DescriptionTypeEnum::FULL, expression,
                             &Options::options(), locale)
         }
 
-        pub fn get_description_cron_options_locale(expression: String,
+        pub fn get_description_cron_options_locale(expression: &str,
                                                    options: &Options,
-                                                   locale: String) -> String {
+                                                   locale: &str) -> String {
             get_description(DescriptionTypeEnum::FULL, expression,
                             options, locale)
         }
 
 
         pub fn get_description_cron_type_expr(desc_type: DescriptionTypeEnum,
-                                              expression: String) -> String {
+                                              expression: &str) -> String {
             get_description(desc_type, expression,
-                            &Options::options(), rust_i18n::locale())
+                            &Options::options(), &rust_i18n::locale())
         }
 
         pub fn get_description_cron_type_expr_locale(desc_type: DescriptionTypeEnum,
-                                                     expression: String,
-                                                     locale: String) -> String {
+                                                     expression: &str,
+                                                     locale: &str) -> String {
             get_description(desc_type, expression,
                             &Options::options(), locale)
         }
 
         pub fn get_description_cron_type_expr_opts(desc_type: DescriptionTypeEnum,
-                                                   expression: String,
+                                                   expression: &str,
                                                    options: &Options) -> String {
             get_description(desc_type, expression,
-                            options, rust_i18n::locale())
+                            options, &rust_i18n::locale())
         }
     }
 }
