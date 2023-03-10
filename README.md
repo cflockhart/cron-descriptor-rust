@@ -10,6 +10,6 @@ Only English and Spanish are available right now, but translating from the Java 
 See `tests/tests_*.rs`. E.g. 
 
 ```
-use crate::cronparser::cron_expression_descriptor;
-assert_eq!("Every 45 seconds", cron_expression_descriptor::get_description_cron("*/45 * * * * *".to_string()));
+use cron_descriptor::cronparser::cron_expression_descriptor;
+assert_eq!("Every 45 seconds", cron_expression_descriptor::get_description_cron("*/45 * * * * *"));
 ```
