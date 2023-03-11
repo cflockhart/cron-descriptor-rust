@@ -1,8 +1,10 @@
 use cron_descriptor;
 extern crate strfmt;
 
-use cron_descriptor::cronparser::cron_expression_descriptor;
 use cron_descriptor::cronparser::Options;
+mod test_utils;
+use crate::test_utils::unwrapped_description_options;
+use crate::test_utils::unwrapped_description;
 use ctor;
 
 
@@ -15,11 +17,11 @@ fn init() {
 fn test_every_second() {
     assert_eq!(
         "Cada segundo",
-        cron_expression_descriptor::get_description_cron("* * * * * *")
+        unwrapped_description("* * * * * *")
     );
     assert_eq!(
         "Cada segundo",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "* * * * * *",
             &Options::twenty_four_hour()
         )
@@ -30,11 +32,11 @@ fn test_every_second() {
 fn test_every45seconds() {
     assert_eq!(
         "Cada 45 segundos",
-        cron_expression_descriptor::get_description_cron("*/45 * * * * *")
+        unwrapped_description("*/45 * * * * *")
     );
     assert_eq!(
         "Cada 45 segundos",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "*/45 * * * * *",
             &Options::twenty_four_hour()
         )
@@ -45,22 +47,22 @@ fn test_every45seconds() {
 fn test_minute_span() {
     assert_eq!(
         "Cada minuto entre 11:00 AM y 11:10 AM",
-        cron_expression_descriptor::get_description_cron("0-10 11 * * *")
+        unwrapped_description("0-10 11 * * *")
     );
     assert_eq!(
         "Cada minuto entre 11:00 y 11:10",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "0-10 11 * * *",
             &Options::twenty_four_hour()
         )
     );
     assert_eq!(
         "Cada minuto, en 1:00 AM",
-        cron_expression_descriptor::get_description_cron("* 1 * * *")
+        unwrapped_description("* 1 * * *")
     );
     assert_eq!(
         "Cada minuto, en 12:00 AM",
-        cron_expression_descriptor::get_description_cron("* 0 * * *")
+        unwrapped_description("* 0 * * *")
     );
 }
 
@@ -68,15 +70,15 @@ fn test_minute_span() {
 fn test_every_minute() {
     assert_eq!(
         "Cada minuto",
-        cron_expression_descriptor::get_description_cron("* * * * *")
+        unwrapped_description("* * * * *")
     );
     assert_eq!(
         "Cada minuto",
-        cron_expression_descriptor::get_description_cron("*/1 * * * *")
+        unwrapped_description("*/1 * * * *")
     );
     assert_eq!(
         "Cada minuto",
-        cron_expression_descriptor::get_description_cron("0 0/1 * * * ?")
+        unwrapped_description("0 0/1 * * * ?")
     );
 }
 
@@ -84,15 +86,15 @@ fn test_every_minute() {
 fn test_every_hour() {
     assert_eq!(
         "Cada hora",
-        cron_expression_descriptor::get_description_cron("0 0 * * * ?")
+        unwrapped_description("0 0 * * * ?")
     );
     assert_eq!(
         "Cada hora",
-        cron_expression_descriptor::get_description_cron("0 0 0/1 * * ?")
+        unwrapped_description("0 0 0/1 * * ?")
     );
     assert_eq!(
         "Cada hora",
-        cron_expression_descriptor::get_description_cron("0 * * * *")
+        unwrapped_description("0 * * * *")
     );
 }
 
@@ -100,15 +102,15 @@ fn test_every_hour() {
 fn test_every_xminutes() {
     assert_eq!(
         "Cada 5 minutos",
-        cron_expression_descriptor::get_description_cron("*/5 * * * *")
+        unwrapped_description("*/5 * * * *")
     );
     assert_eq!(
         "Cada 5 minutos",
-        cron_expression_descriptor::get_description_cron("0 */5 * * * *")
+        unwrapped_description("0 */5 * * * *")
     );
     assert_eq!(
         "Cada 10 minutos",
-        cron_expression_descriptor::get_description_cron("0 0/10 * * * ?")
+        unwrapped_description("0 0/10 * * * ?")
     );
 }
 
@@ -116,18 +118,18 @@ fn test_every_xminutes() {
 fn test_daily_at_time() {
     assert_eq!(
         "En 11:30 AM",
-        cron_expression_descriptor::get_description_cron("30 11 * * *")
+        unwrapped_description("30 11 * * *")
     );
     assert_eq!(
         "En 11:30",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "30 11 * * *",
             &Options::twenty_four_hour()
         )
     );
     assert_eq!(
         "En 11:00 AM",
-        cron_expression_descriptor::get_description_cron("0 11 * * *")
+        unwrapped_description("0 11 * * *")
     );
 }
 
@@ -135,18 +137,18 @@ fn test_daily_at_time() {
 fn test_time_of_day_certain_days_of_week() {
     assert_eq!(
         "En 11:00 PM, lunes hasta viernes",
-        cron_expression_descriptor::get_description_cron("0 23 ? * MON-FRI")
+        unwrapped_description("0 23 ? * MON-FRI")
     );
     assert_eq!(
         "En 23:00, lunes hasta viernes",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "0 23 ? * MON-FRI",
             &Options::twenty_four_hour()
         )
     );
     assert_eq!(
         "En 11:30 AM, lunes hasta viernes",
-        cron_expression_descriptor::get_description_cron("30 11 * * 1-5")
+        unwrapped_description("30 11 * * 1-5")
     );
 }
 
@@ -154,7 +156,7 @@ fn test_time_of_day_certain_days_of_week() {
 fn test_one_month_only() {
     assert_eq!(
         "Cada minuto, sólo en marzo",
-        cron_expression_descriptor::get_description_cron("* * * 3 *")
+        unwrapped_description("* * * 3 *")
     );
 }
 
@@ -162,7 +164,7 @@ fn test_one_month_only() {
 fn test_two_months_only() {
     assert_eq!(
         "Cada minuto, sólo en marzo y junio",
-        cron_expression_descriptor::get_description_cron("* * * 3,6 *")
+        unwrapped_description("* * * 3,6 *")
     );
 }
 
@@ -170,11 +172,11 @@ fn test_two_months_only() {
 fn test_two_times_each_afternoon() {
     assert_eq!(
         "En 2:30 PM y 4:30 PM",
-        cron_expression_descriptor::get_description_cron("30 14,16 * * *")
+        unwrapped_description("30 14,16 * * *")
     );
     assert_eq!(
         "En 14:30 y 16:30",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "30 14,16 * * *",
             &Options::twenty_four_hour()
         )
@@ -185,11 +187,11 @@ fn test_two_times_each_afternoon() {
 fn test_three_times_daily() {
     assert_eq!(
         "En 6:30 AM, 2:30 PM y 4:30 PM",
-        cron_expression_descriptor::get_description_cron("30 6,14,16 * * *")
+        unwrapped_description("30 6,14,16 * * *")
     );
     assert_eq!(
         "En 06:30, 14:30 y 16:30",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "30 6,14,16 * * *",
             &Options::twenty_four_hour()
         )
@@ -200,19 +202,19 @@ fn test_three_times_daily() {
 fn test_once_aweek() {
     assert_eq!(
         "En 9:46 AM, sólo en domingo",
-        cron_expression_descriptor::get_description_cron("46 9 * * 0")
+        unwrapped_description("46 9 * * 0")
     );
     assert_eq!(
         "En 9:46 AM, sólo en domingo",
-        cron_expression_descriptor::get_description_cron("46 9 * * 7")
+        unwrapped_description("46 9 * * 7")
     );
     assert_eq!(
         "En 9:46 AM, sólo en lunes",
-        cron_expression_descriptor::get_description_cron("46 9 * * 1")
+        unwrapped_description("46 9 * * 1")
     );
     assert_eq!(
         "En 9:46 AM, sólo en sábado",
-        cron_expression_descriptor::get_description_cron("46 9 * * 6")
+        unwrapped_description("46 9 * * 6")
     );
 }
 
@@ -224,21 +226,21 @@ fn test_once_aweek_non_zero_based() {
     };
     assert_eq!(
         "En 9:46 AM, sólo en domingo",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "46 9 * * 1",
             &options
         )
     );
     assert_eq!(
         "En 9:46 AM, sólo en lunes",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "46 9 * * 2",
             &options
         )
     );
     assert_eq!(
         "En 9:46 AM, sólo en sábado",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "46 9 * * 7",
             &options
         )
@@ -249,15 +251,15 @@ fn test_once_aweek_non_zero_based() {
 fn test_twice_aweek() {
     assert_eq!(
         "En 9:46 AM, sólo en lunes y martes",
-        cron_expression_descriptor::get_description_cron("46 9 * * 1,2")
+        unwrapped_description("46 9 * * 1,2")
     );
     assert_eq!(
         "En 9:46 AM, sólo en domingo y sábado",
-        cron_expression_descriptor::get_description_cron("46 9 * * 0,6")
+        unwrapped_description("46 9 * * 0,6")
     );
     assert_eq!(
         "En 9:46 AM, sólo en sábado y domingo",
-        cron_expression_descriptor::get_description_cron("46 9 * * 6,7")
+        unwrapped_description("46 9 * * 6,7")
     );
 }
 
@@ -269,14 +271,14 @@ fn test_twice_aweek_non_zero_based() {
     };
     assert_eq!(
         "En 9:46 AM, sólo en domingo y lunes",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "46 9 * * 1,2",
             &options
         )
     );
     assert_eq!(
         "En 9:46 AM, sólo en viernes y sábado",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "46 9 * * 6,7",
             &options
         )
@@ -287,11 +289,11 @@ fn test_twice_aweek_non_zero_based() {
 fn test_day_of_month() {
     assert_eq!(
         "En 12:23 PM, en el 15 día del mes",
-        cron_expression_descriptor::get_description_cron("23 12 15 * *")
+        unwrapped_description("23 12 15 * *")
     );
     assert_eq!(
         "En 12:23, en el 15 día del mes",
-        cron_expression_descriptor::get_description_cron_options(
+        unwrapped_description_options(
             "23 12 15 * *",
             &Options::twenty_four_hour()
         )
@@ -302,7 +304,7 @@ fn test_day_of_month() {
 fn test_month_name() {
     assert_eq!(
         "En 12:23 PM, sólo en enero",
-        cron_expression_descriptor::get_description_cron("23 12 * JAN *")
+        unwrapped_description("23 12 * JAN *")
     );
 }
 
@@ -310,7 +312,7 @@ fn test_month_name() {
 fn test_day_of_month_with_question_mark() {
     assert_eq!(
         "En 12:23 PM, sólo en enero",
-        cron_expression_descriptor::get_description_cron("23 12 ? JAN *")
+        unwrapped_description("23 12 ? JAN *")
     );
 }
 
@@ -318,7 +320,7 @@ fn test_day_of_month_with_question_mark() {
 fn test_month_name_range2() {
     assert_eq!(
         "En 12:23 PM, enero hasta febrero",
-        cron_expression_descriptor::get_description_cron("23 12 * JAN-FEB *")
+        unwrapped_description("23 12 * JAN-FEB *")
     );
 }
 
@@ -326,7 +328,7 @@ fn test_month_name_range2() {
 fn test_month_name_range3() {
     assert_eq!(
         "En 12:23 PM, enero hasta marzo",
-        cron_expression_descriptor::get_description_cron("23 12 * JAN-MAR *")
+        unwrapped_description("23 12 * JAN-MAR *")
     );
 }
 
@@ -334,7 +336,7 @@ fn test_month_name_range3() {
 fn test_month_name_ranges() {
     assert_eq!(
         "En 3:00 AM, sólo en enero hasta marzo y mayo hasta junio",
-        cron_expression_descriptor::get_description_cron("0 0 3 * 1-3,5-6 *")
+        unwrapped_description("0 0 3 * 1-3,5-6 *")
     );
 }
 
@@ -342,7 +344,7 @@ fn test_month_name_ranges() {
 fn test_day_of_week_name() {
     assert_eq!(
         "En 12:23 PM, sólo en domingo",
-        cron_expression_descriptor::get_description_cron("23 12 * * SUN")
+        unwrapped_description("23 12 * * SUN")
     );
 }
 
@@ -350,15 +352,15 @@ fn test_day_of_week_name() {
 fn test_day_of_week_range() {
     assert_eq!(
         "Cada 5 minutos, en 3:00 PM, lunes hasta viernes",
-        cron_expression_descriptor::get_description_cron("*/5 15 * * MON-FRI")
+        unwrapped_description("*/5 15 * * MON-FRI")
     );
     assert_eq!(
         "Cada 5 minutos, en 3:00 PM, domingo hasta sábado",
-        cron_expression_descriptor::get_description_cron("*/5 15 * * 0-6")
+        unwrapped_description("*/5 15 * * 0-6")
     );
     assert_eq!(
         "Cada 5 minutos, en 3:00 PM, sábado hasta domingo",
-        cron_expression_descriptor::get_description_cron("*/5 15 * * 6-7")
+        unwrapped_description("*/5 15 * * 6-7")
     );
 }
 
@@ -366,7 +368,7 @@ fn test_day_of_week_range() {
 fn test_day_of_week_ranges() {
     assert_eq!(
         "En 3:00 AM, sólo en domingo, martes hasta jueves y sábado",
-        cron_expression_descriptor::get_description_cron("0 0 3 * * 0,2-4,6")
+        unwrapped_description("0 0 3 * * 0,2-4,6")
     );
 }
 
@@ -374,11 +376,11 @@ fn test_day_of_week_ranges() {
 fn test_day_of_week_once_in_month() {
     assert_eq!(
         "Cada minuto, en el terzero lunes del mes",
-        cron_expression_descriptor::get_description_cron("* * * * MON#3")
+        unwrapped_description("* * * * MON#3")
     );
     assert_eq!(
         "Cada minuto, en el terzero domingo del mes",
-        cron_expression_descriptor::get_description_cron("* * * * 0#3")
+        unwrapped_description("* * * * 0#3")
     );
 }
 
@@ -386,11 +388,11 @@ fn test_day_of_week_once_in_month() {
 fn test_last_day_of_the_week_of_the_month() {
     assert_eq!(
         "Cada minuto, en el último jueves del mes",
-        cron_expression_descriptor::get_description_cron("* * * * 4L")
+        unwrapped_description("* * * * 4L")
     );
     assert_eq!(
         "Cada minuto, en el último domingo del mes",
-        cron_expression_descriptor::get_description_cron("* * * * 0L")
+        unwrapped_description("* * * * 0L")
     );
 }
 
@@ -398,7 +400,7 @@ fn test_last_day_of_the_week_of_the_month() {
 fn test_last_day_of_the_month() {
     assert_eq!(
         "Cada 5 minutos, en el último día del mes, sólo en enero",
-        cron_expression_descriptor::get_description_cron("*/5 * L JAN *")
+        unwrapped_description("*/5 * L JAN *")
     );
 }
 
@@ -406,7 +408,7 @@ fn test_last_day_of_the_month() {
 fn test_time_of_day_with_seconds() {
     assert_eq!(
         "En 2:02:30 PM",
-        cron_expression_descriptor::get_description_cron("30 02 14 * * *")
+        unwrapped_description("30 02 14 * * *")
     );
 }
 
@@ -414,21 +416,21 @@ fn test_time_of_day_with_seconds() {
 fn test_second_intervals() {
     assert_eq!(
         "5 segundos 10 después el minuto",
-        cron_expression_descriptor::get_description_cron("5-10 * * * * *")
+        unwrapped_description("5-10 * * * * *")
     );
 }
 
 #[test]
 fn test_second_minutes_hours_intervals() {
     assert_eq!("5 segundos 10 después el minuto, desde 30 hasta el 35 minuto después de la hora, entre 10:00 AM y 12:00 PM",
-                   cron_expression_descriptor::get_description_cron("5-10 30-35 10-12 * * *"));
+                   unwrapped_description("5-10 30-35 10-12 * * *"));
 }
 
 #[test]
 fn test_every5minutes_at30seconds() {
     assert_eq!(
         "30 segundos después el minuto, cada 5 minutos",
-        cron_expression_descriptor::get_description_cron("30 */5 * * * *")
+        unwrapped_description("30 */5 * * * *")
     );
 }
 
@@ -436,7 +438,7 @@ fn test_every5minutes_at30seconds() {
 fn test_minutes_past_the_hour_range() {
     assert_eq!(
         "En 30 minutos pasada la hora, entre 10:00 AM y 1:00 PM, sólo en miércoles y viernes",
-        cron_expression_descriptor::get_description_cron("0 30 10-13 ? * WED,FRI")
+        unwrapped_description("0 30 10-13 ? * WED,FRI")
     );
 }
 
@@ -444,21 +446,21 @@ fn test_minutes_past_the_hour_range() {
 fn test_seconds_past_the_minute_interval() {
     assert_eq!(
         "10 segundos después el minuto, cada 5 minutos",
-        cron_expression_descriptor::get_description_cron("10 0/5 * * * ?")
+        unwrapped_description("10 0/5 * * * ?")
     );
 }
 
 #[test]
 fn test_between_with_interval() {
     assert_eq!("Cada 3 minutos, desde 02 hasta el 59 minuto después de la hora, en 1:00 AM, 9:00 AM y 10:00 PM, entre el 11 y el 26 del mes, enero hasta junio",
-                   cron_expression_descriptor::get_description_cron("2-59/3 1,9,22 11-26 1-6 ?"));
+                   unwrapped_description("2-59/3 1,9,22 11-26 1-6 ?"));
 }
 
 #[test]
 fn test_recurring_first_of_month() {
     assert_eq!(
         "En 6:00 AM",
-        cron_expression_descriptor::get_description_cron("0 0 6 1/1 * ?")
+        unwrapped_description("0 0 6 1/1 * ?")
     );
 }
 
@@ -466,7 +468,7 @@ fn test_recurring_first_of_month() {
 fn test_minutes_past_the_hour() {
     assert_eq!(
         "En 05 minutos pasada la hora",
-        cron_expression_descriptor::get_description_cron("0 5 0/1 * * ?")
+        unwrapped_description("0 5 0/1 * * ?")
     );
 }
 
@@ -477,7 +479,7 @@ fn test_minutes_past_the_hour() {
 fn test_every_past_the_hour() {
     assert_eq!(
         "En 00, 05, 10, 15, 20, 25, 30, 35, 40, 45, 50 y 55 minutos pasada la hora",
-        cron_expression_descriptor::get_description_cron(
+        unwrapped_description(
             "0 0,5,10,15,20,25,30,35,40,45,50,55 * ? * *"
         )
     );
@@ -490,7 +492,7 @@ fn test_every_past_the_hour() {
 fn test_every_xminute_past_the_hour_with_interval() {
     assert_eq!(
         "Cada 2 minutos, desde 00 hasta el 30 minuto después de la hora, en 5:00 PM, lunes hasta viernes",
-        cron_expression_descriptor::get_description_cron("0 0-30/2 17 ? * MON-FRI")
+        unwrapped_description("0 0-30/2 17 ? * MON-FRI")
     );
 }
 
@@ -501,7 +503,7 @@ fn test_every_xminute_past_the_hour_with_interval() {
 fn test_one_year_only_with_seconds() {
     assert_eq!(
         "Cada segundo, sólo en 2013",
-        cron_expression_descriptor::get_description_cron("* * * * * * 2013")
+        unwrapped_description("* * * * * * 2013")
     );
 }
 
@@ -509,7 +511,7 @@ fn test_one_year_only_with_seconds() {
 fn test_one_year_only_without_seconds() {
     assert_eq!(
         "Cada minuto, sólo en 2013",
-        cron_expression_descriptor::get_description_cron("* * * * * 2013")
+        unwrapped_description("* * * * * 2013")
     );
 }
 
@@ -517,7 +519,7 @@ fn test_one_year_only_without_seconds() {
 fn test_two_years_only() {
     assert_eq!(
         "Cada minuto, sólo en 2013 y 2014",
-        cron_expression_descriptor::get_description_cron("* * * * * 2013,2014")
+        unwrapped_description("* * * * * 2013,2014")
     );
 }
 
@@ -525,7 +527,7 @@ fn test_two_years_only() {
 fn test_year_range2() {
     assert_eq!(
         "En 12:23 PM, enero hasta febrero, 2013 hasta 2014",
-        cron_expression_descriptor::get_description_cron("23 12 * JAN-FEB * 2013-2014")
+        unwrapped_description("23 12 * JAN-FEB * 2013-2014")
     );
 }
 
@@ -533,7 +535,7 @@ fn test_year_range2() {
 fn test_year_range3() {
     assert_eq!(
         "En 12:23 PM, enero hasta marzo, 2013 hasta 2015",
-        cron_expression_descriptor::get_description_cron("23 12 * JAN-MAR * 2013-2015")
+        unwrapped_description("23 12 * JAN-MAR * 2013-2015")
     );
 }
 
@@ -541,31 +543,31 @@ fn test_year_range3() {
 fn test_issue26() {
     assert_eq!(
         "En 05 y 10 minutos pasada la hora",
-        cron_expression_descriptor::get_description_cron("5,10 * * * *")
+        unwrapped_description("5,10 * * * *")
     );
     assert_eq!(
         "En 05 y 10 minutos pasada la hora, en 12:00 AM",
-        cron_expression_descriptor::get_description_cron("5,10 0 * * *")
+        unwrapped_description("5,10 0 * * *")
     );
     assert_eq!(
         "En 05 y 10 minutos pasada la hora, en el 2 día del mes",
-        cron_expression_descriptor::get_description_cron("5,10 * 2 * *")
+        unwrapped_description("5,10 * 2 * *")
     );
     assert_eq!(
         "Cada 10 minutos, en el 2 día del mes",
-        cron_expression_descriptor::get_description_cron("5/10 * 2 * *")
+        unwrapped_description("5/10 * 2 * *")
     );
 
     assert_eq!(
         "5 y 6 segundos después el minuto",
-        cron_expression_descriptor::get_description_cron("5,6 0 * * * *")
+        unwrapped_description("5,6 0 * * * *")
     );
     assert_eq!(
         "5 y 6 segundos después el minuto, en 1:00 AM",
-        cron_expression_descriptor::get_description_cron("5,6 0 1 * * *")
+        unwrapped_description("5,6 0 1 * * *")
     );
     assert_eq!(
         "5 y 6 segundos después el minuto, en el 2 día del mes",
-        cron_expression_descriptor::get_description_cron("5,6 0 * 2 * *")
+        unwrapped_description("5,6 0 * 2 * *")
     );
 }

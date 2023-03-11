@@ -25,19 +25,42 @@ mod string_utils {
 
 mod date_time_utils {
     pub static DAYS_OF_WEEK_ARR: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    pub static MONTHS_ARR: [&str; 12] = ["january", "february", "march", "april", "may", "june",
-        "july", "august", "september", "october", "november", "december"];
+    pub static MONTHS_ARR: [&str; 12] = [
+        "january",
+        "february",
+        "march",
+        "april",
+        "may",
+        "june",
+        "july",
+        "august",
+        "september",
+        "october",
+        "november",
+        "december",
+    ];
 
     use crate::cronparser::Options;
 
-    pub fn format_time(hours_expression: &String, minutes_expression: &String, opts: &Options) -> String {
-        format_time_secs(&hours_expression, &minutes_expression, &"".to_string(), opts)
+    pub fn format_time(
+        hours_expression: &String,
+        minutes_expression: &String,
+        opts: &Options,
+    ) -> String {
+        format_time_secs(
+            &hours_expression,
+            &minutes_expression,
+            &"".to_string(),
+            opts,
+        )
     }
 
-    pub fn format_time_secs(hours_expression: &String,
-                            minutes_expression: &String,
-                            seconds_expression: &String,
-                            opts: &Options) -> String {
+    pub fn format_time_secs(
+        hours_expression: &String,
+        minutes_expression: &String,
+        seconds_expression: &String,
+        opts: &Options,
+    ) -> String {
         let mut hour: i8 = hours_expression.parse().unwrap();
         let mut period: String = "".to_string();
 
@@ -70,16 +93,20 @@ mod date_time_utils {
         } else {
             format!("{}", hour)
         };
-        format!("{0}:{1}{2}{3}", formatted_hours, format!("{:0>2}", minutes), seconds, period)
+        format!(
+            "{0}:{1}{2}{3}",
+            formatted_hours,
+            format!("{:0>2}", minutes),
+            seconds,
+            period
+        )
     }
-
 
     pub fn get_day_of_week_name(day_of_week: usize) -> String {
         let day_str = DAYS_OF_WEEK_ARR[day_of_week % 7];
         t!(day_str)
     }
 }
-
 
 pub fn format_minutes(minutes_expression: &str) -> String {
     if minutes_expression.contains(",") {
@@ -145,40 +172,41 @@ pub mod cronparser {
         }
     }
 
-
     pub mod cron_expression_descriptor {
-        use std::collections::HashMap;
         use lazy_static::lazy_static;
+        use std::collections::HashMap;
         use string_builder::Builder;
 
-        use crate::{cronparser, string_utils};
         use crate::cronparser::{CasingTypeEnum, DescriptionTypeEnum, Options};
         use crate::date_time_utils::{format_time, format_time_secs};
-        use crate::description_builder::{DayOfMonthDescriptionBuilder, DayOfWeekDescriptionBuilder, HoursDescriptionBuilder, MinutesDescriptionBuilder, MonthDescriptionBuilder, SecondsDescriptionBuilder, YearDescriptionBuilder};
         use crate::description_builder::DescriptionBuilder;
+        use crate::description_builder::{
+            DayOfMonthDescriptionBuilder, DayOfWeekDescriptionBuilder, HoursDescriptionBuilder,
+            MinutesDescriptionBuilder, MonthDescriptionBuilder, SecondsDescriptionBuilder,
+            YearDescriptionBuilder,
+        };
+        use crate::{cronparser, string_utils};
 
         const SPECIAL_CHARACTERS: [char; 4] = ['/', '-', ',', '*'];
 
-        #[derive(Debug)]
+        #[derive(Debug, PartialEq)]
         pub struct ParseException {
-            s: String,
-            error_offset: u8,
+            pub s: String,
+            pub error_offset: u8,
         }
 
         mod expression_parser {
             /* Cron reference
-      ┌───────────── minute (0 - 59)
-      │ ┌───────────── hour (0 - 23)
-      │ │ ┌───────────── day of month (1 - 31)
-      │ │ │ ┌───────────── month (1 - 12)
-      │ │ │ │ ┌───────────── day of week (0 - 6) (Sunday to Saturday; 7 is also Sunday on some systems)
-      │ │ │ │ │
-      │ │ │ │ │
-      │ │ │ │ │
-      * * * * *  command to execute
-     */
-
-
+             ┌───────────── minute (0 - 59)
+             │ ┌───────────── hour (0 - 23)
+             │ │ ┌───────────── day of month (1 - 31)
+             │ │ │ ┌───────────── month (1 - 12)
+             │ │ │ │ ┌───────────── day of week (0 - 6) (Sunday to Saturday; 7 is also Sunday on some systems)
+             │ │ │ │ │
+             │ │ │ │ │
+             │ │ │ │ │
+             * * * * *  command to execute
+            */
 
             use lazy_static::lazy_static;
 
@@ -187,7 +215,10 @@ pub mod cronparser {
             use crate::string_utils;
             use regex::Regex;
 
-            pub fn parse(expression: &str, options: &Options) -> Result<Vec<String>, ParseException> {
+            pub fn parse(
+                expression: &str,
+                options: &Options,
+            ) -> Result<Vec<String>, ParseException> {
                 let mut parsed: Vec<&str> = vec![""; 7];
                 if expression.trim().is_empty() {
                     lazy_static! {
@@ -198,7 +229,8 @@ pub mod cronparser {
                         error_offset: 0,
                     })
                 } else {
-                    let expression_parts: Vec<&str> = expression.trim().split_whitespace().collect();
+                    let expression_parts: Vec<&str> =
+                        expression.trim().split_whitespace().collect();
                     if expression_parts.len() < 5 {
                         return Err(ParseException {
                             s: expression.to_string(),
@@ -233,9 +265,12 @@ pub mod cronparser {
             }
 
             fn normalise_expression(expression_parts: Vec<&str>, options: &Options) -> Vec<String> {
-                static DAYS_OF_WEEK_ARR: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                static MONTHS_ARR: [&str; 12] = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-                    "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+                static DAYS_OF_WEEK_ARR: [&str; 7] =
+                    ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                static MONTHS_ARR: [&str; 12] = [
+                    "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV",
+                    "DEC",
+                ];
                 let mut normalised: Vec<String> = vec!["".to_string(); 7];
 
                 (0..expression_parts.len()).for_each(|i| {
@@ -244,22 +279,22 @@ pub mod cronparser {
 
                 normalised[3] = normalised[3].replace("?", "*");
                 normalised[5] = normalised[5].replace("?", "*");
-                
-                (0..=2).for_each(|i| normalised[i] = 
-                    if normalised[i].starts_with("0/") { 
+
+                (0..=2).for_each(|i| {
+                    normalised[i] = if normalised[i].starts_with("0/") {
                         normalised[i].replace("0/", "*/")
                     } else {
                         normalised[i].to_string()
                     }
-                );
+                });
 
-                (3..=5).for_each(|i| normalised[i] = 
-                    if normalised[i].starts_with("1/") { 
+                (3..=5).for_each(|i| {
+                    normalised[i] = if normalised[i].starts_with("1/") {
                         normalised[i].replace("1/", "*/")
                     } else {
                         normalised[i].to_string()
                     }
-                );
+                });
 
                 for i in 0..normalised.len() {
                     if normalised[i] == "*/1" {
@@ -270,14 +305,16 @@ pub mod cronparser {
                 // convert SUN-SAT format to 0-6 format
                 if !string_utils::is_numeric(&normalised[5]) {
                     for i in 0..=6 {
-                        normalised[5] = normalised[5].replace(DAYS_OF_WEEK_ARR[i], i.to_string().as_str());
+                        normalised[5] =
+                            normalised[5].replace(DAYS_OF_WEEK_ARR[i], i.to_string().as_str());
                     }
                 }
 
                 // convert JAN-DEC format to 1-12 format
                 if !string_utils::is_numeric(&normalised[4]) {
                     for i in 1..12 {
-                        normalised[4] = normalised[4].replace(MONTHS_ARR[i-1], i.to_string().as_str());
+                        normalised[4] =
+                            normalised[4].replace(MONTHS_ARR[i - 1], i.to_string().as_str());
                     }
                 }
 
@@ -300,25 +337,49 @@ pub mod cronparser {
             }
         }
 
-        pub fn get_description(description_type: DescriptionTypeEnum,
-                               expression: &str,
-                               options: &Options,
-                               locale: &str) -> String {
+        pub fn get_description(
+            description_type: DescriptionTypeEnum,
+            expression: &str,
+            options: &Options,
+            locale: &str,
+        ) -> Result<String, ParseException> {
             rust_i18n::set_locale(&locale);
-            let expression_parts = expression_parser::parse(expression, options).unwrap();
-
-            let description_res = match description_type {
-                DescriptionTypeEnum::FULL => get_full_description(&expression_parts, options),
-                DescriptionTypeEnum::TIMEOFDAY => get_time_of_day_description(&expression_parts, options),
-                DescriptionTypeEnum::SECONDS => get_seconds_description(&expression_parts, options),
-                DescriptionTypeEnum::MINUTES => get_minutes_description(&expression_parts, options),
-                DescriptionTypeEnum::HOURS => get_hours_description(&expression_parts, options),
-                DescriptionTypeEnum::DAYOFWEEK => get_day_of_week_description(&expression_parts, options),
-                DescriptionTypeEnum::MONTH => get_month_description(&expression_parts, options),
-                DescriptionTypeEnum::DAYOFMONTH => get_day_of_month_description(&expression_parts, options),
-                DescriptionTypeEnum::YEAR => get_year_description(&expression_parts, options)
-            };
-            description_res
+            let expression_parsed = expression_parser::parse(expression, options);
+            match expression_parsed {
+                Ok(expression_parts) => {
+                    let description_res = match description_type {
+                        DescriptionTypeEnum::FULL => {
+                            get_full_description(&expression_parts, options)
+                        }
+                        DescriptionTypeEnum::TIMEOFDAY => {
+                            get_time_of_day_description(&expression_parts, options)
+                        }
+                        DescriptionTypeEnum::SECONDS => {
+                            get_seconds_description(&expression_parts, options)
+                        }
+                        DescriptionTypeEnum::MINUTES => {
+                            get_minutes_description(&expression_parts, options)
+                        }
+                        DescriptionTypeEnum::HOURS => {
+                            get_hours_description(&expression_parts, options)
+                        }
+                        DescriptionTypeEnum::DAYOFWEEK => {
+                            get_day_of_week_description(&expression_parts, options)
+                        }
+                        DescriptionTypeEnum::MONTH => {
+                            get_month_description(&expression_parts, options)
+                        }
+                        DescriptionTypeEnum::DAYOFMONTH => {
+                            get_day_of_month_description(&expression_parts, options)
+                        }
+                        DescriptionTypeEnum::YEAR => {
+                            get_year_description(&expression_parts, options)
+                        }
+                    };
+                    Ok(description_res)
+                }
+                Err(pe) => Err(pe),
+            }
         }
 
         // From the C# code, not Java.
@@ -333,11 +394,10 @@ pub mod cronparser {
             } else {
                 day_of_month_desc
             };
-            let desc1 = format!("{0}{1}{2}{3}",
-                                time_segment,
-                                week_or_month_desc,
-                                month_desc,
-                                year_desc);
+            let desc1 = format!(
+                "{0}{1}{2}{3}",
+                time_segment, week_or_month_desc, month_desc, year_desc
+            );
             // eprintln!("time: \"{}\"; day_of_month: \"{}\"; month: \"{}\"; year: \"{}\"",
             //           time_segment, week_or_month_desc, month_desc, year_desc);
             // println!("before verbosity: {}", desc1);
@@ -345,13 +405,15 @@ pub mod cronparser {
             transform_case(&desc2, options)
         }
 
-
         fn transform_verbosity(description: String, options: &Options) -> String {
             let mut desc_temp = description.clone();
             if !options.verbose {
-                desc_temp = desc_temp.replace(&t!("messages.every_1_minute"), &t!("messages.every_minute"));
-                desc_temp = desc_temp.replace(&t!("messages.every_1_hour"), &t!("messages.every_hour"));
-                desc_temp = desc_temp.replace(&t!("messages.every_1_day"), &t!("messages.every_day"));
+                desc_temp =
+                    desc_temp.replace(&t!("messages.every_1_minute"), &t!("messages.every_minute"));
+                desc_temp =
+                    desc_temp.replace(&t!("messages.every_1_hour"), &t!("messages.every_hour"));
+                desc_temp =
+                    desc_temp.replace(&t!("messages.every_1_day"), &t!("messages.every_day"));
                 desc_temp = desc_temp.replace(&format!(", {}", &t!("messages.every_minute")), "");
                 desc_temp = desc_temp.replace(&format!(", {}", &t!("messages.every_hour")), "");
                 desc_temp = desc_temp.replace(&format!(", {}", &t!("messages.every_day")), "");
@@ -364,39 +426,43 @@ pub mod cronparser {
             match &options.casing_type {
                 CasingTypeEnum::Sentence => description[0..1].to_uppercase() + &description[1..],
                 CasingTypeEnum::Title => description[0..1].to_uppercase() + &description[1..],
-                CasingTypeEnum::LowerCase => description.to_lowercase()
+                CasingTypeEnum::LowerCase => description.to_lowercase(),
             }
         }
 
         fn get_year_description(expression_parts: &Vec<String>, options: &Options) -> String {
             let builder = YearDescriptionBuilder { options };
-            builder.get_segment_description(&expression_parts[6],
-                                            format!(", {}", t!("messages.every_year")))
+            builder.get_segment_description(
+                &expression_parts[6],
+                format!(", {}", t!("messages.every_year")),
+            )
         }
 
-        fn get_day_of_week_description(expression_parts: &Vec<String>, options: &Options) -> String {
+        fn get_day_of_week_description(
+            expression_parts: &Vec<String>,
+            options: &Options,
+        ) -> String {
             let builder = DayOfWeekDescriptionBuilder { options };
             // println!("in get_day_of_week_description, expr: {}", &expression_parts[5]);
-            builder.get_segment_description(&expression_parts[5],
-                                            format!(", {}", t!("messages.every_day")))
+            builder.get_segment_description(
+                &expression_parts[5],
+                format!(", {}", t!("messages.every_day")),
+            )
         }
 
         fn get_minutes_description(expression_parts: &Vec<String>, options: &Options) -> String {
             let builder = MinutesDescriptionBuilder { options };
-            builder.get_segment_description(&expression_parts[1],
-                                            t!("messages.every_minute"))
+            builder.get_segment_description(&expression_parts[1], t!("messages.every_minute"))
         }
 
         fn get_seconds_description(expression_parts: &Vec<String>, options: &Options) -> String {
             let builder = SecondsDescriptionBuilder { options };
-            builder.get_segment_description(&expression_parts[0],
-                                            t!("messages.every_second"))
+            builder.get_segment_description(&expression_parts[0], t!("messages.every_second"))
         }
 
         fn get_hours_description(expression_parts: &Vec<String>, options: &Options) -> String {
             let builder = HoursDescriptionBuilder { options };
-            builder.get_segment_description(&expression_parts[2],
-                                            t!("messages.every_hour"))
+            builder.get_segment_description(&expression_parts[2], t!("messages.every_hour"))
         }
 
         fn get_month_description(expression_parts: &Vec<String>, options: &Options) -> String {
@@ -404,7 +470,10 @@ pub mod cronparser {
             builder.get_segment_description(&expression_parts[4], "".to_string())
         }
 
-        fn get_day_of_month_description(expression_parts: &Vec<String>, options: &Options) -> String {
+        fn get_day_of_month_description(
+            expression_parts: &Vec<String>,
+            options: &Options,
+        ) -> String {
             use regex::Regex;
             use strfmt::strfmt;
             let exp = expression_parts[3].replace("?", "*");
@@ -432,52 +501,68 @@ pub mod cronparser {
                 } else {
                     let builder = DayOfMonthDescriptionBuilder { options };
                     // eprintln!("in get_day_of_month_description, exp: {}", exp);
-                    builder.get_segment_description(&exp,
-                                                    format!(", {}", t!("messages.every_day")))
+                    builder.get_segment_description(&exp, format!(", {}", t!("messages.every_day")))
                 }
             };
             description
         }
 
-        fn get_time_of_day_description(expression_parts: &Vec<String>, options: &Options) -> String {
+        fn get_time_of_day_description(
+            expression_parts: &Vec<String>,
+            options: &Options,
+        ) -> String {
             let seconds_expression = &expression_parts[0];
             let minutes_expression = &expression_parts[1];
             let hours_expression = &expression_parts[2];
 
             let mut description = Builder::default();
 
-            if minutes_expression.chars().all(|c| !SPECIAL_CHARACTERS.contains(&c))
-                && hours_expression.chars().all(|c| !SPECIAL_CHARACTERS.contains(&c))
-                && seconds_expression.chars().all(|c| !SPECIAL_CHARACTERS.contains(&c)) {
+            if minutes_expression
+                .chars()
+                .all(|c| !SPECIAL_CHARACTERS.contains(&c))
+                && hours_expression
+                    .chars()
+                    .all(|c| !SPECIAL_CHARACTERS.contains(&c))
+                && seconds_expression
+                    .chars()
+                    .all(|c| !SPECIAL_CHARACTERS.contains(&c))
+            {
                 description.append(t!("at"));
                 if options.need_space_between_words {
                     description.append(" ");
                 }
-                description.append(format_time_secs(hours_expression,
-                                                    minutes_expression,
-                                                    seconds_expression,
-                                                    options));
-            } else if minutes_expression.contains("-") 
-                    && !minutes_expression.contains("/") 
-                    && string_utils::not_contains_any(hours_expression, &SPECIAL_CHARACTERS) {
+                description.append(format_time_secs(
+                    hours_expression,
+                    minutes_expression,
+                    seconds_expression,
+                    options,
+                ));
+            } else if minutes_expression.contains("-")
+                && !minutes_expression.contains("/")
+                && string_utils::not_contains_any(hours_expression, &SPECIAL_CHARACTERS)
+            {
                 let mut minute_parts = minutes_expression.split("-");
-                let msg0 = format_time(hours_expression,
-                                       &minute_parts.next().unwrap().to_string(),
-                                       options);
-                let msg1 = format_time(hours_expression,
-                                       &minute_parts.next().unwrap().to_string(),
-                                       options);
-                description.append(t!("messages.every_minute_between",0 = &msg0, 1 = &msg1));
-            } else if hours_expression.contains(",") 
-                && string_utils::not_contains_any(minutes_expression, &SPECIAL_CHARACTERS) {
+                let msg0 = format_time(
+                    hours_expression,
+                    &minute_parts.next().unwrap().to_string(),
+                    options,
+                );
+                let msg1 = format_time(
+                    hours_expression,
+                    &minute_parts.next().unwrap().to_string(),
+                    options,
+                );
+                description.append(t!("messages.every_minute_between", 0 = &msg0, 1 = &msg1));
+            } else if hours_expression.contains(",")
+                && string_utils::not_contains_any(minutes_expression, &SPECIAL_CHARACTERS)
+            {
                 let hour_parts: Vec<_> = hours_expression.split(",").collect();
                 let hpsz = hour_parts.len();
                 description.append(t!("at"));
 
                 for (i, hp) in hour_parts.iter().enumerate() {
                     description.append(" ");
-                    description.append(format_time(&hp.to_string(),
-                                                   minutes_expression, options));
+                    description.append(format_time(&hp.to_string(), minutes_expression, options));
                     if i < hpsz - 2 {
                         description.append(",");
                     }
@@ -494,63 +579,83 @@ pub mod cronparser {
                 // println!("seconds_description: {} minutes_description: {}, hours_description: {}",
                 //   seconds_description, minutes_description, hours_description);
                 description.append(seconds_description);
-                if description.len() > 0 && ! minutes_description.is_empty() {
+                if description.len() > 0 && !minutes_description.is_empty() {
                     description.append(", ");
                 }
                 description.append(minutes_description);
-                if description.len() > 0 && ! hours_description.is_empty()  {
+                if description.len() > 0 && !hours_description.is_empty() {
                     description.append(", ");
                 }
                 description.append(hours_description);
-
             }
             description.string().unwrap()
         }
 
-        pub fn get_description_cron(expression: &str) -> String {
+        pub fn get_description_cron(expression: &str) -> Result<String, ParseException> {
             // println!("Expression: {}", expression);
-            get_description(DescriptionTypeEnum::FULL, expression,
-                            &Options::options(), &rust_i18n::locale())
+            get_description(
+                DescriptionTypeEnum::FULL,
+                expression,
+                &Options::options(),
+                &rust_i18n::locale(),
+            )
         }
 
-        pub fn get_description_cron_options(expression: &str, options: &cronparser::Options) -> String {
-            get_description(DescriptionTypeEnum::FULL, expression,
-                            options, &rust_i18n::locale())
+        pub fn get_description_cron_options(
+            expression: &str,
+            options: &cronparser::Options,
+        ) -> Result<String, ParseException> {
+            get_description(
+                DescriptionTypeEnum::FULL,
+                expression,
+                options,
+                &rust_i18n::locale(),
+            )
         }
 
-        pub fn get_description_cron_locale(expression: &str, locale: &str) -> String {
-            get_description(DescriptionTypeEnum::FULL, expression,
-                            &Options::options(), locale)
+        pub fn get_description_cron_locale(expression: &str, locale: &str) -> Result<String, ParseException> {
+            get_description(
+                DescriptionTypeEnum::FULL,
+                expression,
+                &Options::options(),
+                locale,
+            )
         }
 
-        pub fn get_description_cron_options_locale(expression: &str,
-                                                   options: &Options,
-                                                   locale: &str) -> String {
-            get_description(DescriptionTypeEnum::FULL, expression,
-                            options, locale)
+        pub fn get_description_cron_options_locale(
+            expression: &str,
+            options: &Options,
+            locale: &str,
+        ) -> Result<String, ParseException> {
+            get_description(DescriptionTypeEnum::FULL, expression, options, locale)
         }
 
-
-        pub fn get_description_cron_type_expr(desc_type: DescriptionTypeEnum,
-                                              expression: &str) -> String {
-            get_description(desc_type, expression,
-                            &Options::options(), &rust_i18n::locale())
+        pub fn get_description_cron_type_expr(
+            desc_type: DescriptionTypeEnum,
+            expression: &str,
+        ) -> Result<String, ParseException> {
+            get_description(
+                desc_type,
+                expression,
+                &Options::options(),
+                &rust_i18n::locale(),
+            )
         }
 
-        pub fn get_description_cron_type_expr_locale(desc_type: DescriptionTypeEnum,
-                                                     expression: &str,
-                                                     locale: &str) -> String {
-            get_description(desc_type, expression,
-                            &Options::options(), locale)
+        pub fn get_description_cron_type_expr_locale(
+            desc_type: DescriptionTypeEnum,
+            expression: &str,
+            locale: &str,
+        ) -> Result<String, ParseException> {
+            get_description(desc_type, expression, &Options::options(), locale)
         }
 
-        pub fn get_description_cron_type_expr_opts(desc_type: DescriptionTypeEnum,
-                                                   expression: &str,
-                                                   options: &Options) -> String {
-            get_description(desc_type, expression,
-                            options, &rust_i18n::locale())
+        pub fn get_description_cron_type_expr_opts(
+            desc_type: DescriptionTypeEnum,
+            expression: &str,
+            options: &Options,
+        ) ->  Result<String, ParseException> {
+            get_description(desc_type, expression, options, &rust_i18n::locale())
         }
     }
 }
-
-

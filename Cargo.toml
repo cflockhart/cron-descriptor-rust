@@ -1,6 +1,6 @@
 [package]
 name = "cron-descriptor"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Craig Flockhart <craigflockhart0@gmail.com>"]
 description = "Provides human-readable desriptions of cron expressions"
 readme = "README.md"
