@@ -2,7 +2,7 @@
 name = "cron-descriptor"
 version = "0.1.1"
 authors = ["Craig Flockhart <craigflockhart0@gmail.com>"]
-description = "Provides human-readable desriptions of cron expressions"
+description = "Provides human-readable descriptions of cron expressions"
 readme = "README.md"
 keywords = ["cron","localization","date-and-time"]
 categories = ["parsing","localization","date-and-time"]
