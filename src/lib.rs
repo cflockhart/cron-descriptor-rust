@@ -423,9 +423,16 @@ pub mod cronparser {
         }
 
         fn transform_case(description: &str, options: &Options) -> String {
+            let mut chars = description.chars();
             match &options.casing_type {
-                CasingTypeEnum::Sentence => description[0..1].to_uppercase() + &description[1..],
-                CasingTypeEnum::Title => description[0..1].to_uppercase() + &description[1..],
+                CasingTypeEnum::Sentence => match chars.next() {
+                    None => String::new(),
+                    Some(f) => f.to_uppercase().collect::<String>() + chars.as_str(),
+                },
+                CasingTypeEnum::Title => match chars.next() {
+                    None => String::new(),
+                    Some(f) => f.to_uppercase().collect::<String>() + chars.as_str(),
+                },
                 CasingTypeEnum::LowerCase => description.to_lowercase(),
             }
         }
@@ -613,7 +620,10 @@ pub mod cronparser {
             )
         }
 
-        pub fn get_description_cron_locale(expression: &str, locale: &str) -> Result<String, ParseException> {
+        pub fn get_description_cron_locale(
+            expression: &str,
+            locale: &str,
+        ) -> Result<String, ParseException> {
             get_description(
                 DescriptionTypeEnum::FULL,
                 expression,
@@ -654,7 +664,7 @@ pub mod cronparser {
             desc_type: DescriptionTypeEnum,
             expression: &str,
             options: &Options,
-        ) ->  Result<String, ParseException> {
+        ) -> Result<String, ParseException> {
             get_description(desc_type, expression, options, &rust_i18n::locale())
         }
     }

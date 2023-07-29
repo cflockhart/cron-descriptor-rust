@@ -27,7 +27,7 @@ ctor = "0.1.26"
 
 [package.metadata.i18n]
 # The available locales for your application, default: ["en"].
-available-locales = ["en", "es"]
+available-locales = ["en", "es", "pt"]
 
 # The default locale, default: "en".
 default-locale = "en"
