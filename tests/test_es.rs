@@ -3,10 +3,9 @@ extern crate strfmt;
 
 use cron_descriptor::cronparser::Options;
 mod test_utils;
-use crate::test_utils::unwrapped_description_options;
 use crate::test_utils::unwrapped_description;
+use crate::test_utils::unwrapped_description_options;
 use ctor;
-
 
 #[ctor::ctor]
 fn init() {
@@ -15,31 +14,19 @@ fn init() {
 
 #[test]
 fn test_every_second() {
+    assert_eq!("Cada segundo", unwrapped_description("* * * * * *"));
     assert_eq!(
         "Cada segundo",
-        unwrapped_description("* * * * * *")
-    );
-    assert_eq!(
-        "Cada segundo",
-        unwrapped_description_options(
-            "* * * * * *",
-            &Options::twenty_four_hour()
-        )
+        unwrapped_description_options("* * * * * *", &Options::twenty_four_hour())
     );
 }
 
 #[test]
 fn test_every45seconds() {
+    assert_eq!("Cada 45 segundos", unwrapped_description("*/45 * * * * *"));
     assert_eq!(
         "Cada 45 segundos",
-        unwrapped_description("*/45 * * * * *")
-    );
-    assert_eq!(
-        "Cada 45 segundos",
-        unwrapped_description_options(
-            "*/45 * * * * *",
-            &Options::twenty_four_hour()
-        )
+        unwrapped_description_options("*/45 * * * * *", &Options::twenty_four_hour())
     );
 }
 
@@ -51,10 +38,7 @@ fn test_minute_span() {
     );
     assert_eq!(
         "Cada minuto entre 11:00 y 11:10",
-        unwrapped_description_options(
-            "0-10 11 * * *",
-            &Options::twenty_four_hour()
-        )
+        unwrapped_description_options("0-10 11 * * *", &Options::twenty_four_hour())
     );
     assert_eq!(
         "Cada minuto, en 1:00 AM",
@@ -68,69 +52,33 @@ fn test_minute_span() {
 
 #[test]
 fn test_every_minute() {
-    assert_eq!(
-        "Cada minuto",
-        unwrapped_description("* * * * *")
-    );
-    assert_eq!(
-        "Cada minuto",
-        unwrapped_description("*/1 * * * *")
-    );
-    assert_eq!(
-        "Cada minuto",
-        unwrapped_description("0 0/1 * * * ?")
-    );
+    assert_eq!("Cada minuto", unwrapped_description("* * * * *"));
+    assert_eq!("Cada minuto", unwrapped_description("*/1 * * * *"));
+    assert_eq!("Cada minuto", unwrapped_description("0 0/1 * * * ?"));
 }
 
 #[test]
 fn test_every_hour() {
-    assert_eq!(
-        "Cada hora",
-        unwrapped_description("0 0 * * * ?")
-    );
-    assert_eq!(
-        "Cada hora",
-        unwrapped_description("0 0 0/1 * * ?")
-    );
-    assert_eq!(
-        "Cada hora",
-        unwrapped_description("0 * * * *")
-    );
+    assert_eq!("Cada hora", unwrapped_description("0 0 * * * ?"));
+    assert_eq!("Cada hora", unwrapped_description("0 0 0/1 * * ?"));
+    assert_eq!("Cada hora", unwrapped_description("0 * * * *"));
 }
 
 #[test]
 fn test_every_xminutes() {
-    assert_eq!(
-        "Cada 5 minutos",
-        unwrapped_description("*/5 * * * *")
-    );
-    assert_eq!(
-        "Cada 5 minutos",
-        unwrapped_description("0 */5 * * * *")
-    );
-    assert_eq!(
-        "Cada 10 minutos",
-        unwrapped_description("0 0/10 * * * ?")
-    );
+    assert_eq!("Cada 5 minutos", unwrapped_description("*/5 * * * *"));
+    assert_eq!("Cada 5 minutos", unwrapped_description("0 */5 * * * *"));
+    assert_eq!("Cada 10 minutos", unwrapped_description("0 0/10 * * * ?"));
 }
 
 #[test]
 fn test_daily_at_time() {
-    assert_eq!(
-        "En 11:30 AM",
-        unwrapped_description("30 11 * * *")
-    );
+    assert_eq!("En 11:30 AM", unwrapped_description("30 11 * * *"));
     assert_eq!(
         "En 11:30",
-        unwrapped_description_options(
-            "30 11 * * *",
-            &Options::twenty_four_hour()
-        )
+        unwrapped_description_options("30 11 * * *", &Options::twenty_four_hour())
     );
-    assert_eq!(
-        "En 11:00 AM",
-        unwrapped_description("0 11 * * *")
-    );
+    assert_eq!("En 11:00 AM", unwrapped_description("0 11 * * *"));
 }
 
 #[test]
@@ -141,10 +89,7 @@ fn test_time_of_day_certain_days_of_week() {
     );
     assert_eq!(
         "En 23:00, lunes hasta viernes",
-        unwrapped_description_options(
-            "0 23 ? * MON-FRI",
-            &Options::twenty_four_hour()
-        )
+        unwrapped_description_options("0 23 ? * MON-FRI", &Options::twenty_four_hour())
     );
     assert_eq!(
         "En 11:30 AM, lunes hasta viernes",
@@ -176,10 +121,7 @@ fn test_two_times_each_afternoon() {
     );
     assert_eq!(
         "En 14:30 y 16:30",
-        unwrapped_description_options(
-            "30 14,16 * * *",
-            &Options::twenty_four_hour()
-        )
+        unwrapped_description_options("30 14,16 * * *", &Options::twenty_four_hour())
     );
 }
 
@@ -191,10 +133,7 @@ fn test_three_times_daily() {
     );
     assert_eq!(
         "En 06:30, 14:30 y 16:30",
-        unwrapped_description_options(
-            "30 6,14,16 * * *",
-            &Options::twenty_four_hour()
-        )
+        unwrapped_description_options("30 6,14,16 * * *", &Options::twenty_four_hour())
     );
 }
 
@@ -226,24 +165,15 @@ fn test_once_aweek_non_zero_based() {
     };
     assert_eq!(
         "En 9:46 AM, sólo en domingo",
-        unwrapped_description_options(
-            "46 9 * * 1",
-            &options
-        )
+        unwrapped_description_options("46 9 * * 1", &options)
     );
     assert_eq!(
         "En 9:46 AM, sólo en lunes",
-        unwrapped_description_options(
-            "46 9 * * 2",
-            &options
-        )
+        unwrapped_description_options("46 9 * * 2", &options)
     );
     assert_eq!(
         "En 9:46 AM, sólo en sábado",
-        unwrapped_description_options(
-            "46 9 * * 7",
-            &options
-        )
+        unwrapped_description_options("46 9 * * 7", &options)
     );
 }
 
@@ -271,17 +201,11 @@ fn test_twice_aweek_non_zero_based() {
     };
     assert_eq!(
         "En 9:46 AM, sólo en domingo y lunes",
-        unwrapped_description_options(
-            "46 9 * * 1,2",
-            &options
-        )
+        unwrapped_description_options("46 9 * * 1,2", &options)
     );
     assert_eq!(
         "En 9:46 AM, sólo en viernes y sábado",
-        unwrapped_description_options(
-            "46 9 * * 6,7",
-            &options
-        )
+        unwrapped_description_options("46 9 * * 6,7", &options)
     );
 }
 
@@ -293,10 +217,7 @@ fn test_day_of_month() {
     );
     assert_eq!(
         "En 12:23, en el 15 día del mes",
-        unwrapped_description_options(
-            "23 12 15 * *",
-            &Options::twenty_four_hour()
-        )
+        unwrapped_description_options("23 12 15 * *", &Options::twenty_four_hour())
     );
 }
 
@@ -406,10 +327,7 @@ fn test_last_day_of_the_month() {
 
 #[test]
 fn test_time_of_day_with_seconds() {
-    assert_eq!(
-        "En 2:02:30 PM",
-        unwrapped_description("30 02 14 * * *")
-    );
+    assert_eq!("En 2:02:30 PM", unwrapped_description("30 02 14 * * *"));
 }
 
 #[test]
@@ -458,10 +376,7 @@ fn test_between_with_interval() {
 
 #[test]
 fn test_recurring_first_of_month() {
-    assert_eq!(
-        "En 6:00 AM",
-        unwrapped_description("0 0 6 1/1 * ?")
-    );
+    assert_eq!("En 6:00 AM", unwrapped_description("0 0 6 1/1 * ?"));
 }
 
 #[test]
@@ -479,9 +394,7 @@ fn test_minutes_past_the_hour() {
 fn test_every_past_the_hour() {
     assert_eq!(
         "En 00, 05, 10, 15, 20, 25, 30, 35, 40, 45, 50 y 55 minutos pasada la hora",
-        unwrapped_description(
-            "0 0,5,10,15,20,25,30,35,40,45,50,55 * ? * *"
-        )
+        unwrapped_description("0 0,5,10,15,20,25,30,35,40,45,50,55 * ? * *")
     );
 }
 

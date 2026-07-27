@@ -10,6 +10,7 @@ repository = "https://github.com/cflockhart/cron-descriptor-rust"
 homepage = "https://github.com/cflockhart/cron-descriptor-rust"
 license = "Apache-2.0"
 edition = "2021"
+rust-version = "1.75"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -18,12 +19,16 @@ lazy_static = "1.4.0"
 once_cell = "1.10.0"
 rust-i18n = "1.1.2"
 regex = "1.5.4"
-string-builder = "0.2.0"
 strfmt = "0.2.1"
-substring = "1.4.5"
+thiserror = "1.0"
 
 [dev-dependencies]
 ctor = "0.1.26"
+
+[profile.release]
+panic = "abort"
+lto = true
+opt-level = 3
 
 [package.metadata.i18n]
 # The available locales for your application, default: ["en"].
@@ -31,3 +36,4 @@ available-locales = ["en", "es", "pt"]
 
 # The default locale, default: "en".
 default-locale = "en"
+
