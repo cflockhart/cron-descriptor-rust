@@ -4,7 +4,7 @@ Translated from the Java version at https://github.com/grahamar/cron-parser
 Original Project in C#, on which the Java version is based: https://github.com/bradymholt/cron-expression-descriptor
 
 # i18n
-Only English and Spanish are available right now, but translating from the Java properties files to YAML in `locales` is straightforward.
+English, Spanish and Portuguese are currently available, but translating from the Java properties files to YAML in `locales` is straightforward. Please submit a pull request if you've translated to another language!
 
 # Usage
 See `tests/tests_*.rs`. E.g. 
